@@ -6,21 +6,32 @@ const mongoose = require('mongoose');
 const bookRoutes = require('./routes/books');
 const errorHandler = require('./middleware/errorHandler');
 
-// ── Middleware ────────────────────────────────────────────────
+
+//  Middleware 
+
 app.use(express.json());
 
-// ── Database ──────────────────────────────────────────────────
+
+// Database 
+
 mongoose.connect('mongodb://localhost:27017/booksdb')
   .then(() => console.log('MongoDB connected'))
   .catch((err) => console.log(err));
 
-// ── Routes ────────────────────────────────────────────────────
+
+//  Routes 
+
 app.use('/api/books', bookRoutes);
 
-// ── Error Handler (must be last) ──────────────────────────────
+
+
+//  Error Handler (must be last)
+
 app.use(errorHandler);
 
-// ── Server ────────────────────────────────────────────────────
+
+//  Server 
+
 app.listen(3000, () => {
   console.log('Server running on port 3000');
 });
