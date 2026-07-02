@@ -1,9 +1,7 @@
 const express = require('express');
 const app = express();
-const books = [];
 require('dotenv').config();
 
-const mongoose = require('mongoose');
 const bookRoutes = require('./routes/books');
 const errorHandler = require('./middleware/errorHandler');
 const connectDB = require('./config/database');
