@@ -12,9 +12,6 @@ const PORT =process.env.PORT;
 //  Middleware 
 app.use(express.json());
 
-// Database 
-connectDB();
-
 //  Routes 
 app.use('/api/books', bookRoutes);
 
@@ -23,6 +20,14 @@ app.use(errorHandler);
 
 
 //  Server 
-app.listen( PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+  
+  // Database
+  await connectDB();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
+
+startServer();
