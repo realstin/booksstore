@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
-exports.register = async (req, res) => {
+exports.register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
@@ -23,15 +23,18 @@ exports.register = async (req, res) => {
    password: hashedPassword,
    });
 
+    // 4. Never send the password hash back to the client
+    const { password: _password, ...safeUser } = user.toObject();
+
     res.status(201).json({
       message: "User created successfully",
-      user
+      user: safeUser
     });
 
   } catch (error) {
-    res.status(500).json({
-      message: "Server error",
-      error: error.message
-    });
+    // Pass to the shared errorHandler instead of handling it here —
+    // it now knows how to turn Mongoose errors (validation, duplicate key)
+    // into proper status codes instead of a blanket 500.
+    next(error);
   }
 };
