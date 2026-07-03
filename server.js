@@ -5,12 +5,14 @@ require('dotenv').config();
 const bookRoutes = require('./routes/books');
 const errorHandler = require('./middleware/errorHandler');
 const connectDB = require('./config/database');
+const authRoutes = require("./routes/auth");
 const PORT =process.env.PORT;
 
 //  Middleware 
 app.use(express.json());
 
-//  Routes 
+//  Routes
+app.use("/api/auth", authRoutes); 
 app.use('/api/books', bookRoutes);
 
 //  Error Handler (must be last)
