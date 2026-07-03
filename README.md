@@ -20,6 +20,7 @@ to organize an Express app so it doesn't turn into a single giant file.
 - How to validate input **before** it touches your database
 - How to handle errors in one central place instead of everywhere
 - How to keep secrets (like database URLs) out of your code using `.env`
+- How to register users and store them safely — never saving a raw password, always hashing it first with `bcrypt`
 
 ---
 
@@ -29,9 +30,10 @@ to organize an Express app so it doesn't turn into a single giant file.
 |---|---|
 | **Node.js** | JavaScript runtime that runs the server |
 | **Express.js** | Web framework — handles routing and HTTP logic |
-| **MongoDB** | NoSQL database that stores the books |
+| **MongoDB** | NoSQL database that stores the books and users |
 | **Mongoose** | Library that lets us model MongoDB data as JS objects |
 | **dotenv** | Loads environment variables from a `.env` file |
+| **bcrypt** | Hashes user passwords before they're stored, so raw passwords are never saved |
 
 ---
 
@@ -39,19 +41,22 @@ to organize an Express app so it doesn't turn into a single giant file.
 
 ```
 booksstore/
-├── server.js                 # Entry point — starts everything
+├── server.js                    # Entry point — starts everything
 ├── config/
-│   └── database.js           # Connects to MongoDB
+│   └── database.js              # Connects to MongoDB
 ├── models/
-│   └── Book.js                # Defines what a "Book" looks like in the database
+│   ├── Book.js                  # Defines what a "Book" looks like in the database
+│   └── User.js                  # Defines what a "User" looks like (name, email, password, role, avatar)
 ├── controllers/
-│   └── bookController.js     # The actual logic for each action (create, get, update, delete)
+│   ├── bookController.js        # The actual logic for each book action (create, get, update, delete)
+│   └── authController.js        # Handles user registration, including password hashing
 ├── routes/
-│   └── books.js               # Maps URLs + HTTP methods to controller functions
+│   ├── books.js                 # Maps URLs + HTTP methods to book controller functions
+│   └── auth.js                  # Maps URLs + HTTP methods to auth controller functions
 ├── middleware/
-│   ├── validateBook.js       # Checks incoming data before it reaches the controller
-│   └── errorHandler.js       # Catches errors from anywhere in the app
-├── .env                       # Your secret config (PORT, MONGODB_URI) — not committed
+│   ├── validateBook.js          # Checks incoming data before it reaches the controller
+│   └── errorHandler.js          # Catches errors from anywhere in the app
+├── .env                          # Your secret config (PORT, MONGODB_URI) — not committed
 └── package.json
 ```
 
@@ -85,9 +90,13 @@ and sends back an error. If everything looks good, it calls `next()` to pass con
 
 This request → middleware → controller → model → response pipeline is the backbone of almost every Express app you'll ever build.
 
+Registering a user follows the same shape, just on a different path: `server.js` → `routes/auth.js` → `controllers/authController.js` → `models/User.js` → MongoDB.
+
 ---
 
 ## 📡 API Endpoints
+
+### Books
 
 Base URL: `/api/books`
 
@@ -114,6 +123,26 @@ Content-Type: application/json
 ### Example: Get All Books
 ```http
 GET /api/books
+```
+
+### Auth
+
+Base URL: `/api/auth`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/register` | Create a new user account. The password is hashed with `bcrypt` before it's saved — it's never stored as plain text. |
+
+### Example: Register a User
+```http
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "mypassword123"
+}
 ```
 
 ---
@@ -153,7 +182,7 @@ GET /api/books
 **Controllers** — contain the actual logic: what happens when that route is hit. This is where we talk to the database and 
 decide what response to send back.
 
-**Models** — define the *shape* of your data (a Book has a title, author, and price) and give you methods to save, find, update, 
+**Models** — define the *shape* of your data (a Book has a title, author, and price; a User has a name, email, password, role, and avatar) and give you methods to save, find, update, 
 and delete that data in MongoDB.
 
 **Middleware** — functions that run *before* your controller, with the power to stop the request early (like validation) or just 
@@ -161,6 +190,8 @@ pass it along (`next()`). Express apps are really just a chain of middleware fun
 
 **Error Handling Middleware** — a special kind of middleware (it takes 4 arguments: `err, req, res, next`) that Express automatically 
 routes errors to, so you don't need `try/catch` boilerplate scattered everywhere.
+
+**Password Hashing** — turning a readable password like `"mypassword123"` into an irreversible scrambled string using `bcrypt`, before it's ever saved to the database. This way, even if the database is ever exposed, no one can read the original passwords. Logging in later works by hashing the entered password the same way and comparing the two hashes — never by "unhashing" anything.
 
 ---
 
