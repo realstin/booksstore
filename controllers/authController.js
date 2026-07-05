@@ -1,5 +1,9 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
+// ========== REGISTER FUNCTION ==========
+// User creates account
 exports.register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -9,32 +13,92 @@ exports.register = async (req, res, next) => {
 
     if (existingUser) {
       return res.status(400).json({
-        message: "User already exists"
+        message: "User already exists with this email"
       });
     }
 
-    // 2. Hash the password
+    // 2. Hash the password (make it unreadable)
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Create new user
+    // 3. Create new user in database
     const user = await User.create({
-   name,
-   email,
-   password: hashedPassword,
-   });
+      name,
+      email,
+      password: hashedPassword,
+    });
 
     // 4. Never send the password hash back to the client
     const { password: _password, ...safeUser } = user.toObject();
 
     res.status(201).json({
-      message: "User created successfully",
+      message: "User created successfully. Please login to continue.",
       user: safeUser
     });
 
   } catch (error) {
-    // Pass to the shared errorHandler instead of handling it here —
-    // it now knows how to turn Mongoose errors (validation, duplicate key)
-    // into proper status codes instead of a blanket 500.
+    next(error);
+  }
+};
+
+// ========== LOGIN FUNCTION ==========
+// User logs in with email and password, gets JWT token
+exports.login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    // 1. CHECK IF USER EXISTS
+    // Find user by email in database
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid email or password"
+      });
+    }
+
+    // 2. CHECK IF PASSWORD IS CORRECT
+    // bcrypt.compare does:
+    // - Takes plain password from user (req.body.password)
+    // - Takes hashed password from database (user.password)
+    // - Compares them mathematically
+    // - Returns true if they match, false if not
+    
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        message: "Invalid email or password"
+      });
+    }
+
+    // 3. CREATE JWT TOKEN
+    // jwt.sign does:
+    // - Takes data (user info)
+    // - Signs it with JWT_SECRET (makes it secure)
+    // - Returns a token string
+    // - Token expires in 24 hours (86400 seconds = 24 hours)
+    
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        email: user.email,
+        name: user.name
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // 4. SEND TOKEN TO USER
+    // Remove password from response (never send it back)
+    const { password: _password, ...safeUser } = user.toObject();
+
+    res.status(200).json({
+      message: "Login successful",
+      token: token,
+      user: safeUser
+    });
+
+  } catch (error) {
     next(error);
   }
 };
