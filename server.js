@@ -10,7 +10,13 @@ const authRoutes = require("./routes/auth");
 const PORT =process.env.PORT;
 
 //  Middleware
-app.use(cors()); 
+app.use(
+  cors({
+    origin: [ 
+      "https://bookstowa.vercel.app",
+    ],
+  })
+); 
 app.use(express.json());
 
 //  Routes
