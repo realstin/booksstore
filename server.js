@@ -12,7 +12,8 @@ const PORT =process.env.PORT;
 //  Middleware
 app.use(
   cors({
-    origin: [ 
+    origin: [
+      "http://localhost:5173",
       "https://bookstowa.vercel.app",
     ],
   })
