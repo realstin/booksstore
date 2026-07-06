@@ -28,8 +28,6 @@ const validateUserInput = (req, res, next) => {
   }
 
   // ========== NAME VALIDATION (only for registration) ==========
-  // If name is provided, check it's valid
-  // If name is not provided, that's okay (for login endpoint)
   if (name !== undefined && name !== null) {
     if (typeof name !== 'string') {
       errors.push('Name must be a string.');

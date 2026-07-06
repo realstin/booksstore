@@ -3,7 +3,6 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 // ========== REGISTER FUNCTION ==========
-// User creates account
 exports.register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -57,12 +56,6 @@ exports.login = async (req, res, next) => {
     }
 
     // 2. CHECK IF PASSWORD IS CORRECT
-    // bcrypt.compare does:
-    // - Takes plain password from user (req.body.password)
-    // - Takes hashed password from database (user.password)
-    // - Compares them mathematically
-    // - Returns true if they match, false if not
-    
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
     if (!isPasswordCorrect) {
@@ -101,4 +94,4 @@ exports.login = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
+}
