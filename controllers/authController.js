@@ -81,14 +81,20 @@ exports.login = async (req, res, next) => {
       { expiresIn: '24h' }
     );
 
+    res.cookie("bookstowa_token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "None",
+    maxAge: 24 * 60 * 60 * 1000,
+    });
+
     // 4. SEND TOKEN TO USER
     // Remove password from response (never send it back)
     const { password: _password, ...safeUser } = user.toObject();
 
     res.status(200).json({
-      message: "Login successful",
-      token: token,
-      user: safeUser
+    message: "Login successful",
+    user: safeUser
     });
 
   } catch (error) {
