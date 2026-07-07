@@ -39,14 +39,12 @@ exports.register = async (req, res, next) => {
   }
 };
 
-// ========== LOGIN FUNCTION ==========
 // User logs in with email and password, gets JWT token
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
     // 1. CHECK IF USER EXISTS
-    // Find user by email in database
     const user = await User.findOne({ email });
 
     if (!user) {

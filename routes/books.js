@@ -13,8 +13,6 @@ const {
 } = require('../controllers/bookController');
 
 // ========== PROTECTED ROUTES ==========
-// All these routes require a valid JWT token in header:
-// Authorization: Bearer <token>
 
 // CREATE a new book (requires authentication)
 router.post('/', authenticate, validateBook, createBook);

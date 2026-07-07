@@ -5,12 +5,8 @@ const jwt = require('jsonwebtoken');
 const authenticate = (req, res, next) => {
 
   // ========== GET TOKEN FROM COOKIE ==========
-  // Browser automatically sends:
-  // Cookie: bookstowa_token=<token>
-  //
-  // cookie-parser converts it into:
-  // req.cookies.bookstowa_token
-
+  // Browser automatically sends:  Cookie: bookstowa_token=<token>
+  // cookie-parser converts it into:   req.cookies.bookstowa_token
   const token = req.cookies.bookstowa_token;
 
   // Check if token exists
@@ -23,18 +19,17 @@ const authenticate = (req, res, next) => {
 
   // ========== VERIFY TOKEN ==========
   // jwt.verify does:
-  // 1. Check if the token signature is valid
-  // 2. Check if the token has expired
-  // 3. Return the data stored inside the token
+  // 1.Check if the token signature is valid  2.Check if the token has expired 3.Return the data stored inside the token
+  
+   
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Attach user information to the request
     // Other routes can access:
-    // req.user.userId
-    // req.user.email
-    // req.user.name
+    // req.user.userId    req.user.email  req.user.name
+    
 
     req.user = decoded;
 
