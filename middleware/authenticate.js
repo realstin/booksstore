@@ -15,43 +15,34 @@ const authenticate = (req, res, next) => {
       message: 'No token provided. Please login first.'
     });
   }
-
-
   // ========== VERIFY TOKEN ==========
   // jwt.verify does:
   // 1.Check if the token signature is valid  2.Check if the token has expired 3.Return the data stored inside the token
   
-   
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Attach user information to the request
-    // Other routes can access:
-    // req.user.userId    req.user.email  req.user.name
+    // Other routes can access:  req.user.userId    req.user.email  req.user.name
     
-
     req.user = decoded;
 
     // Continue to the protected route
     next();
 
   } catch (error) {
-
     // Token expired
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
         message: 'Token expired. Please login again.'
       });
     }
-
     // Token invalid
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         message: 'Invalid token. Please login again.'
       });
     }
-
     // Other verification errors
     return res.status(401).json({
       message: 'Token verification failed. Please login again.'
