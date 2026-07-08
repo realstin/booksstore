@@ -39,6 +39,7 @@ exports.register = async (req, res, next) => {
   }
 };
 
+// ========== LOGIN FUNCTION ==========
 // User logs in with email and password, gets JWT token
 exports.login = async (req, res, next) => {
   try {
@@ -80,10 +81,10 @@ exports.login = async (req, res, next) => {
     );
 
     res.cookie("bookstowa_token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "None",
-    maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 24 * 60 * 60 * 1000,
     });
 
     // 4. SEND TOKEN TO USER
@@ -91,11 +92,34 @@ exports.login = async (req, res, next) => {
     const { password: _password, ...safeUser } = user.toObject();
 
     res.status(200).json({
-    message: "Login successful",
-    user: safeUser
+      message: "Login successful",
+      user: safeUser
     });
 
   } catch (error) {
     next(error);
   }
-}
+};
+
+// ========== LOGOUT FUNCTION ==========
+// User logs out - clear the HTTP-only cookie
+exports.logout = async (req, res, next) => {
+  try {
+    // Clear the HTTP-only cookie by using res.clearCookie()
+    // This tells the browser to delete the cookie immediately
+    // We must use the SAME cookie options (httpOnly, secure, sameSite) 
+    // as we used when setting it in login
+    res.clearCookie("bookstowa_token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    });
+
+    res.status(200).json({
+      message: "Logout successful. Token cleared."
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
