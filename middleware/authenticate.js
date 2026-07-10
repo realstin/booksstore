@@ -1,8 +1,9 @@
 // Middleware to verify JWT token from HTTP-only cookie and protect routes
 
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
 
   // ========== GET TOKEN FROM COOKIE ==========
   // Browser automatically sends:  Cookie: bookstowa_token=<token>
@@ -15,12 +16,25 @@ const authenticate = (req, res, next) => {
       message: 'No token provided. Please login first.'
     });
   }
+  
   // ========== VERIFY TOKEN ==========
   // jwt.verify does:
-  // 1.Check if the token signature is valid  2.Check if the token has expired 3.Return the data stored inside the token
+  // 1. Check if the token signature is valid
+  // 2. Check if the token has expired
+  // 3. Return the data stored inside the token
   
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // ========== CHECK IF USER STILL EXISTS IN DATABASE ==========
+    // If user was deleted, they should not have access
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+      return res.status(401).json({
+        message: 'User account has been deleted or does not exist. Please login again.'
+      });
+    }
 
     // Attach user information to the request
     // Other routes can access:  req.user.userId    req.user.email  req.user.name
