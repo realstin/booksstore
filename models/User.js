@@ -31,22 +31,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-
-    // ========== EMAIL VERIFICATION FIELDS ==========
-    emailVerified: {
-      type: Boolean,
-      default: false,  // User starts as unverified
-    },
-
-    verificationCode: {
-      type: String,
-      default: null,  // Will store the 6-digit code
-    },
-
-    verificationCodeExpires: {
-      type: Date,
-      default: null,  // Will store when code expires (10 minutes from now)
-    },
   },
   {
     timestamps: true,
