@@ -12,21 +12,21 @@ const {
   deleteBook
 } = require('../controllers/bookController');
 
-// ========== PROTECTED ROUTES ==========
+// protected routes that all requires authentication
 
-// CREATE a new book (requires authentication)
+// CREATE a new book 
 router.post('/', authenticate, validateBook, createBook);
 
-// GET all books (requires authentication)
+// GET all books 
 router.get('/', authenticate, getBooks);
 
-// GET one book by ID (requires authentication)
+// GET one book by ID 
 router.get('/:id', authenticate, getBookById);
 
-// UPDATE book by ID (requires authentication)
+// UPDATE book by ID 
 router.put('/:id', authenticate, validateBook, updateBook);
 
-// DELETE book by ID (requires authentication)
+// DELETE book by ID 
 router.delete('/:id', authenticate, deleteBook);
 
 module.exports = router;
