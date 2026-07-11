@@ -64,11 +64,7 @@ exports.login = async (req, res, next) => {
     }
 
     // 3. CREATE JWT TOKEN
-    // jwt.sign does:
-    // - Takes data (user info)
-    // - Signs it with JWT_SECRET (makes it secure)
-    // - Returns a token string
-    // - Token expires in 24 hours (86400 seconds = 24 hours)
+    // jwt.sign does: it assigns a jwt secret to user info and returns a token string 
     
     const token = jwt.sign(
       {
