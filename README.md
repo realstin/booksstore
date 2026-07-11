@@ -1,3 +1,3 @@
 # 📚 Booksstore API 
 
-this readme will be ready very soon
+this readme will be available very soon
