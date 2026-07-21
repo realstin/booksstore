@@ -49,6 +49,12 @@ const bookSchema = new mongoose.Schema(
       default: ''
     },
 
+    // URL where the actual book file (PDF) can be downloaded/read from
+    pdfUrl: {
+      type: String,
+      default: ''
+    },
+
     pages: {
       type: Number
     },
@@ -56,6 +62,27 @@ const bookSchema = new mongoose.Schema(
     edition: {
       type: String,
       default: '1st Edition'
+    },
+
+    // Average reader rating out of 5 (e.g. shown on Community Favorites cards)
+    rating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5
+    },
+
+    // How many readers have saved/bookmarked this book
+    savesCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+
+    // Manually flag a book to appear in "Community Favorites" / "Trending"
+    featured: {
+      type: Boolean,
+      default: false
     }
   },
   {
