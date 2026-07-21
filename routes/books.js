@@ -12,21 +12,23 @@ const {
   deleteBook
 } = require('../controllers/bookController');
 
-// protected routes that all requires authentication
+// Public routes — anyone (including logged-out visitors on the homepage) can browse books
 
-// CREATE a new book 
+// GET all books
+router.get('/', getBooks);
+
+// GET one book by ID
+router.get('/:id', getBookById);
+
+// Protected routes — require authentication
+
+// CREATE a new book
 router.post('/', authenticate, validateBook, createBook);
 
-// GET all books 
-router.get('/', authenticate, getBooks);
-
-// GET one book by ID 
-router.get('/:id', authenticate, getBookById);
-
-// UPDATE book by ID 
+// UPDATE book by ID
 router.put('/:id', authenticate, validateBook, updateBook);
 
-// DELETE book by ID 
+// DELETE book by ID
 router.delete('/:id', authenticate, deleteBook);
 
 module.exports = router;
