@@ -12,8 +12,26 @@ const createBook = async (req, res, next) => {
 
 const getBooks = async (req, res, next) => {
   try {
-    const allBooks = await Book.find();
-    res.status(200).json(allBooks);
+    const { featured, limit, sort } = req.query;
+
+    const filter = {};
+    if (featured !== undefined) {
+      filter.featured = featured === 'true';
+    }
+
+    // Default: newest books first. Allow override via ?sort=-rating, ?sort=-savesCount, etc.
+    const sortOption = sort || '-createdAt';
+
+    // Cap the limit so a stray value like ?limit=999999 can't be used to dump the whole collection
+    const parsedLimit = Math.min(parseInt(limit, 10) || 0, 100) || 0;
+
+    let query = Book.find(filter).sort(sortOption);
+    if (parsedLimit > 0) {
+      query = query.limit(parsedLimit);
+    }
+
+    const books = await query;
+    res.status(200).json(books);
   } catch (err) {
     next(err);
   }
