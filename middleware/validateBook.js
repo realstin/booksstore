@@ -11,8 +11,12 @@ const validateBook = (req, res, next) => {
     publisher,
     publishedDate,
     coverImage,
+    pdfUrl,
     pages,
-    edition
+    edition,
+    rating,
+    savesCount,
+    featured
   } = req.body;
 
   const errors = [];
@@ -68,8 +72,45 @@ const validateBook = (req, res, next) => {
     }
   }
 
-  if (coverImage !== undefined && typeof coverImage !== 'string') {
-    errors.push('coverImage must be a string.');
+  const isValidUrl = (value) => {
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (coverImage !== undefined && coverImage !== '') {
+    if (typeof coverImage !== 'string') {
+      errors.push('coverImage must be a string.');
+    } else if (!isValidUrl(coverImage)) {
+      errors.push('coverImage must be a valid URL.');
+    }
+  }
+
+  if (pdfUrl !== undefined && pdfUrl !== '') {
+    if (typeof pdfUrl !== 'string') {
+      errors.push('pdfUrl must be a string.');
+    } else if (!isValidUrl(pdfUrl)) {
+      errors.push('pdfUrl must be a valid URL.');
+    }
+  }
+
+  if (rating !== undefined) {
+    if (typeof rating !== 'number' || rating < 0 || rating > 5) {
+      errors.push('rating must be a number between 0 and 5.');
+    }
+  }
+
+  if (savesCount !== undefined) {
+    if (typeof savesCount !== 'number' || !Number.isInteger(savesCount) || savesCount < 0) {
+      errors.push('savesCount must be a non-negative integer.');
+    }
+  }
+
+  if (featured !== undefined && typeof featured !== 'boolean') {
+    errors.push('featured must be true or false.');
   }
 
   if (pages !== undefined) {
