@@ -1,18 +1,24 @@
 const express = require("express");
 const router = express.Router();
 
-const { register, login, logout } = require("../controllers/authController");
+const { register, login, logout, getMe } = require("../controllers/authController");
 const validateUserInput = require("../middleware/validateUser");
 const authenticate = require("../middleware/authenticate");
 
-// ========== REGISTER ENDPOINT ==========
+// ========== PUBLIC ROUTES ==========
+
+// Register new user
 router.post("/register", validateUserInput, register);
 
-// ========== LOGIN ENDPOINT ==========
+// Login user
 router.post("/login", validateUserInput, login);
 
-// ========== LOGOUT ENDPOINT ==========
-// Protected route - user must be authenticated (have valid token in cookie)
+// ========== PROTECTED ROUTES ==========
+
+// Get current user (requires valid token)
+router.get("/me", authenticate, getMe);
+
+// Logout user
 router.post("/logout", authenticate, logout);
 
 module.exports = router;
