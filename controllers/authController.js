@@ -119,3 +119,30 @@ exports.logout = async (req, res, next) => {
     next(error);
   }
 };
+// ========== GET CURRENT USER ==========
+// Fetch current logged-in user data from JWT token
+exports.getMe = async (req, res, next) => {
+  try {
+    // req.user is set by authenticate middleware (from JWT)
+    // It contains: userId, email, name from the token
+
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    // Never send password hash back to client
+    const { password: _password, ...safeUser } = user.toObject();
+
+    res.status(200).json({
+      message: "User data retrieved successfully",
+      user: safeUser
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
