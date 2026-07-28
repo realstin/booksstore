@@ -1,4 +1,5 @@
 const Book = require('../models/Book');
+const axios = require('axios');
 
 const createBook = async (req, res, next) => {
   try {
@@ -67,10 +68,66 @@ const deleteBook = async (req, res, next) => {
   }
 };
 
+const downloadBook = async (req, res, next) => {
+  try {
+    const book = await Book.findById(req.params.id);
+
+    if (!book) {
+      return res.status(404).json({
+        message: 'Book not found'
+      });
+    }
+
+    if (!book.pdfUrl) {
+      return res.status(404).json({
+        message: 'PDF not available for this book'
+      });
+    }
+
+    // Create a safe filename from the book title
+    const safeTitle = (book.title || 'book')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .slice(0, 80);
+
+    const filename = `${safeTitle || 'book'}.pdf`;
+
+    // Fetch the PDF from the external URL
+    const response = await axios.get(book.pdfUrl, {
+      responseType: 'stream',
+      timeout: 30000
+    });
+
+    // Tell the browser this is a downloadable PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${filename}"`
+    );
+
+    // Stream the PDF directly to the browser
+    response.data.pipe(res);
+
+  } catch (err) {
+    console.error('Book download error:', err.message);
+
+    if (err.response) {
+      return res.status(502).json({
+        message: 'Unable to fetch the PDF file'
+      });
+    }
+
+    next(err);
+  }
+};
+
 module.exports = {
   createBook,
   getBooks,
   getBookById,
   updateBook,
-  deleteBook
+  deleteBook,
+  downloadBook
 };

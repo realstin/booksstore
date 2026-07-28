@@ -10,7 +10,8 @@ const {
   getBooks,
   getBookById,
   updateBook,
-  deleteBook
+  deleteBook,
+  downloadBook
 } = require('../controllers/bookController');
 
 // ===== PUBLIC ROUTES =====
@@ -18,16 +19,24 @@ const {
 // GET all books
 router.get('/', getBooks);
 
-// ⭐ STATS ROUTE - PUT THIS FIRST (before /:id)
+// GET statistics
 router.get('/stats', getStats);
 
-// GET one book by ID - PUT THIS AFTER /stats
+// DOWNLOAD book PDF
+router.get('/:id/download', downloadBook);
+
+// GET one book by ID
 router.get('/:id', getBookById);
 
 // ===== PROTECTED ROUTES =====
 
+// CREATE a new book
 router.post('/', authenticate, validateBook, createBook);
+
+// UPDATE book by ID
 router.put('/:id', authenticate, validateBook, updateBook);
+
+// DELETE book by ID
 router.delete('/:id', authenticate, deleteBook);
 
 module.exports = router;
