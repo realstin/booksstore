@@ -31,6 +31,14 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+    // Books saved by this user — stores ObjectId references only, not full documents
+    savedBooks: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Book",
+      },
+    ],
   },
   {
     timestamps: true,

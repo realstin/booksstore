@@ -5,6 +5,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 
 const bookRoutes = require('./routes/books');
+const userRoutes = require('./routes/users');
 const errorHandler = require('./middleware/errorHandler');
 const connectDB = require('./config/database');
 const authRoutes = require("./routes/auth");
@@ -27,8 +28,9 @@ app.use(express.json());
 app.use(cookieParser());
 
 //  Routes
-app.use("/api/auth", authRoutes); 
+app.use("/api/auth", authRoutes);
 app.use('/api/books', bookRoutes);
+app.use('/api/users', userRoutes);
 
 //  Error Handler (must be last)
 app.use(errorHandler);
