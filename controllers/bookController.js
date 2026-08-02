@@ -54,7 +54,10 @@ const getBooks = async (req, res, next) => {
     bookCache.set(cacheKey, books);
     // ============ END CACHE STORAGE ============
 
-    res.status(200).json(books);
+    // ============ NEW: ADD HTTP CACHE HEADER ============
+res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+// ============ END CACHE HEADER ============
+res.status(200).json(books);
   } catch (err) {
     next(err);
   }
@@ -82,7 +85,10 @@ const getBookById = async (req, res, next) => {
     bookCache.set(cacheKey, book);
     // ============ END CACHE STORAGE ============
 
-    res.status(200).json(book);
+    // ============ NEW: ADD HTTP CACHE HEADER ============
+res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days
+// ============ END CACHE HEADER ============
+res.status(200).json(book);
   } catch (err) {
     next(err);
   }
