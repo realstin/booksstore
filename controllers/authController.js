@@ -15,8 +15,9 @@ exports.register = async (req, res, next) => {
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(400).json({
-        message: "User already exists with this email"
+      return res.status(409).json({
+        code: "EMAIL_ALREADY_EXISTS",
+        message: "An account with this email already exists. Please sign in instead."
       });
     }
 
@@ -178,7 +179,8 @@ exports.googleAuth = async (req, res, next) => {
       payload = ticket.getPayload();
     } catch {
       return res.status(401).json({
-        message: "Invalid Google credential. Verification failed."
+        code: "INVALID_GOOGLE_CREDENTIAL",
+        message: "We couldn't verify your Google account. Please try again."
       });
     }
 
@@ -201,18 +203,15 @@ exports.googleAuth = async (req, res, next) => {
       user = await User.findOne({ email });
 
       if (user) {
-        // ── ACCOUNT LINKING ─────────────────────────────────────────────────
-        // An email/password account exists with this email.
-        // Link the Google identity to it so the user gets one unified account.
-        // Their password continues to work; Google is just an additional method.
-        user.googleId = googleId;
-
-        // Only update avatar if they have not set one manually
-        if (!user.avatar) {
-          user.avatar = picture || "";
-        }
-
-        await user.save();
+        // ── EMAIL CONFLICT ───────────────────────────────────────────────────
+        // An email/password account exists with this email but has no Google
+        // identity linked to it. We do NOT auto-link silently — the user must
+        // explicitly sign in with their password. This prevents account takeover
+        // via Google for accounts the user created with a password.
+        return res.status(409).json({
+          code: "EMAIL_ALREADY_EXISTS",
+          message: "An account with this email already exists. Please sign in with your email and password instead."
+        });
       } else {
         // ── NEW USER ─────────────────────────────────────────────────────────
         // No account exists with this email. Create a new BookStore user.
