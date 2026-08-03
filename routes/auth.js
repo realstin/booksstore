@@ -1,20 +1,34 @@
 const express = require("express");
 const router = express.Router();
 
-const { register, login, logout, getMe, googleAuth } = require("../controllers/authController");
+const {
+  register,
+  login,
+  logout,
+  getMe,
+  googleAuth,
+  verifyEmail,
+  resendVerification,
+} = require("../controllers/authController");
 const validateUserInput = require("../middleware/validateUser");
 const authenticate = require("../middleware/authenticate");
 
 // ========== PUBLIC ROUTES ==========
 
-// Register new user
+// Register new user — sends verification email, does NOT log in
 router.post("/register", validateUserInput, register);
 
 // Login user
 router.post("/login", validateUserInput, login);
 
-// Google authentication — frontend sends the Google ID token, backend verifies and issues cookie
+// Google authentication
 router.post("/google", googleAuth);
+
+// Verify email address via token from the verification email
+router.get("/verify-email", verifyEmail);
+
+// Resend verification email
+router.post("/resend-verification", resendVerification);
 
 // ========== PROTECTED ROUTES ==========
 
