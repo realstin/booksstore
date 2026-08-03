@@ -53,7 +53,7 @@ const apiLimiter = rateLimit({
 // Auth rate limiter (very strict for login/signup)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Max 5 login attempts per 15 minutes
+  max: 30, // Max 5 login attempts per 15 minutes
   message: 'Too many login attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
