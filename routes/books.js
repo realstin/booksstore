@@ -23,7 +23,7 @@ router.get('/', getBooks);
 router.get('/stats', getStats);
 
 // DOWNLOAD book PDF
-router.get('/:id/download', downloadBook);
+router.get('/:id/download',authenticate, downloadBook);
 
 // GET one book by ID
 router.get('/:id', getBookById);
