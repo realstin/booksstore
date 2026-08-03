@@ -4,6 +4,7 @@ require('dotenv').config();
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 
 const bookRoutes = require('./routes/books');
 const userRoutes = require('./routes/users');
@@ -21,6 +22,10 @@ app.use(
     credentials: true,
   })
 );
+
+// ============ NEW: SECURITY HEADERS ============
+app.use(helmet()); // Add all default security headers
+// ============ END SECURITY HEADERS ============
 
 app.use(express.json());
 app.use(cookieParser());
