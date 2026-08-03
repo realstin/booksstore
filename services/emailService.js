@@ -25,7 +25,6 @@ const sendVerificationEmail = async (email, name, verificationUrl) => {
     from: `"BookStore" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
     to: email,
     subject: "Verify your BookStore email address",
-    // Plain-text fallback for email clients that don't render HTML
     text: `
 Hi ${firstName},
 
@@ -37,7 +36,6 @@ This link expires in 24 hours. If you did not create a BookStore account, you ca
 
 — The BookStore Team
     `.trim(),
-    // HTML version
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -124,8 +122,30 @@ This link expires in 24 hours. If you did not create a BookStore account, you ca
     `.trim(),
   };
 
-  // Throws on SMTP failure — caller (authController) passes error to next(err)
-  await transporter.sendMail(mailOptions);
+  // ============ NEW: ADD TIMEOUT & ERROR LOGGING ============
+  try {
+    console.log(`[EMAIL] Attempting to send verification email to: ${email}`);
+    
+    // Create a timeout promise that rejects after 10 seconds
+    const emailPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Email sending timed out after 10 seconds')), 10000)
+    );
+
+    // Race between email sending and timeout
+    await Promise.race([emailPromise, timeoutPromise]);
+    
+    console.log(`[EMAIL] ✅ Successfully sent verification email to: ${email}`);
+  } catch (error) {
+    console.error(`[EMAIL] ❌ Failed to send verification email to ${email}:`, error.message);
+    console.error(`[EMAIL] Error details:`, error);
+    
+    // Re-throw so the caller (authController) handles it
+    throw new Error(`Failed to send verification email: ${error.message}`);
+  }
+  // ============ END TIMEOUT & ERROR LOGGING ============
 };
+
+module.exports = { sendVerificationEmail };
 
 module.exports = { sendVerificationEmail };
