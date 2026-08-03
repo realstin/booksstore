@@ -7,15 +7,13 @@ const {
   logout,
   getMe,
   googleAuth,
-  verifyEmail,
-  resendVerification,
 } = require("../controllers/authController");
 const validateUserInput = require("../middleware/validateUser");
 const authenticate = require("../middleware/authenticate");
 
 // ========== PUBLIC ROUTES ==========
 
-// Register new user — sends verification email, does NOT log in
+// Register new user — logs them in immediately
 router.post("/register", validateUserInput, register);
 
 // Login user
@@ -23,12 +21,6 @@ router.post("/login", validateUserInput, login);
 
 // Google authentication
 router.post("/google", googleAuth);
-
-// Verify email address via token from the verification email
-router.get("/verify-email", verifyEmail);
-
-// Resend verification email
-router.post("/resend-verification", resendVerification);
 
 // ========== PROTECTED ROUTES ==========
 
