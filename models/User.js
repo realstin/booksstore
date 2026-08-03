@@ -29,7 +29,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
       // sparse so that null values don't conflict with each other in the unique index
-      unique: true,
       sparse: true,
     },
 
