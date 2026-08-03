@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { register, login, logout, getMe } = require("../controllers/authController");
+const { register, login, logout, getMe, googleAuth } = require("../controllers/authController");
 const validateUserInput = require("../middleware/validateUser");
 const authenticate = require("../middleware/authenticate");
 
@@ -12,6 +12,9 @@ router.post("/register", validateUserInput, register);
 
 // Login user
 router.post("/login", validateUserInput, login);
+
+// Google authentication — frontend sends the Google ID token, backend verifies and issues cookie
+router.post("/google", googleAuth);
 
 // ========== PROTECTED ROUTES ==========
 

@@ -18,7 +18,19 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: true,
+      // Not required — Google-authenticated users have no password
+      required: false,
+      default: null,
+    },
+
+    // Google OAuth identity — populated when a user signs in via Google
+    // null for users who only use email/password
+    googleId: {
+      type: String,
+      default: null,
+      // sparse so that null values don't conflict with each other in the unique index
+      unique: true,
+      sparse: true,
     },
 
     role: {

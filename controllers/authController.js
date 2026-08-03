@@ -1,6 +1,10 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
+
+// Reusable Google OAuth2 client — only needs the client ID for token verification
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // ========== REGISTER FUNCTION ==========
 exports.register = async (req, res, next) => {
@@ -140,6 +144,115 @@ exports.getMe = async (req, res, next) => {
     res.status(200).json({
       message: "User data retrieved successfully",
       user: safeUser
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ========== GOOGLE AUTHENTICATION ==========
+// POST /api/auth/google
+// Frontend sends the Google credential (ID token) obtained from Google Sign-In.
+// Backend verifies it with Google, then finds or creates a BookStore user,
+// issues the existing bookstowa_token cookie, and returns safe user data.
+exports.googleAuth = async (req, res, next) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        message: "Google credential is required."
+      });
+    }
+
+    // ── 1. VERIFY THE ID TOKEN WITH GOOGLE ──────────────────────────────────
+    // This makes a request to Google's servers and validates the token's
+    // signature, expiry, and audience. We never trust the frontend's claims.
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      return res.status(401).json({
+        message: "Invalid Google credential. Verification failed."
+      });
+    }
+
+    // Extract the verified identity fields from Google's response
+    const { sub: googleId, email, name, picture } = payload;
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Google account did not provide an email address."
+      });
+    }
+
+    // ── 2. FIND OR CREATE THE BOOKSTORE USER ────────────────────────────────
+
+    // First try to find by googleId (returning Google user)
+    let user = await User.findOne({ googleId });
+
+    if (!user) {
+      // Not found by googleId — check if this email already has an account
+      user = await User.findOne({ email });
+
+      if (user) {
+        // ── ACCOUNT LINKING ─────────────────────────────────────────────────
+        // An email/password account exists with this email.
+        // Link the Google identity to it so the user gets one unified account.
+        // Their password continues to work; Google is just an additional method.
+        user.googleId = googleId;
+
+        // Only update avatar if they have not set one manually
+        if (!user.avatar) {
+          user.avatar = picture || "";
+        }
+
+        await user.save();
+      } else {
+        // ── NEW USER ─────────────────────────────────────────────────────────
+        // No account exists with this email. Create a new BookStore user.
+        // password is null — Google users do not have a BookStore password.
+        user = await User.create({
+          name: name || email.split("@")[0],
+          email,
+          password: null,
+          googleId,
+          avatar: picture || "",
+        });
+      }
+    }
+
+    // ── 3. ISSUE THE EXISTING BOOKSTORE JWT ─────────────────────────────────
+    // Same shape and settings as the email/password login — nothing changes
+    // for the rest of the application. authenticate middleware works as-is.
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        email: user.email,
+        name: user.name,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    res.cookie("bookstowa_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    // ── 4. RETURN SAFE USER DATA ─────────────────────────────────────────────
+    const { password: _password, ...safeUser } = user.toObject();
+
+    return res.status(200).json({
+      message: "Google authentication successful",
+      user: safeUser,
     });
 
   } catch (error) {
