@@ -89,5 +89,26 @@ const bookSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+// ============ NEW: DATABASE INDEXES ============
+
+// Index for filtering by featured status
+bookSchema.index({ featured: 1 });
+
+// Compound index for featured books sorted by date (very common query)
+bookSchema.index({ featured: 1, createdAt: -1 });
+
+// Index for sorting by creation date
+bookSchema.index({ createdAt: -1 });
+
+// Index for sorting by rating
+bookSchema.index({ rating: -1 });
+
+// Index for sorting by saves count
+bookSchema.index({ savesCount: -1 });
+
+// Index for searching by ISBN (already unique, but good for queries)
+bookSchema.index({ isbn: 1 });
+
+// ============ END INDEXES ============
 
 module.exports = mongoose.model('Book', bookSchema);
