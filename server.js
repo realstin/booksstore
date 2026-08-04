@@ -11,6 +11,7 @@ const userRoutes = require('./routes/users');
 const errorHandler = require('./middleware/errorHandler');
 const connectDB = require('./config/database');
 const authRoutes = require("./routes/auth");
+const statsRoutes = require('./routes/stats');
 const PORT =process.env.PORT;
 
 app.use(
@@ -61,7 +62,7 @@ app.use(globalLimiter);
 
 // Routes
 app.use("/api/auth", authLimiter, authRoutes); // Stricter for auth
-app.use('/api/stats', apiLimiter, require('./routes/stats')); 
+app.use('/api/stats', apiLimiter,statsRoutes ); 
 app.use('/api/books', apiLimiter, bookRoutes); // Strict for API
 app.use('/api/users', apiLimiter, userRoutes); // Strict for API
 

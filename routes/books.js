@@ -19,7 +19,7 @@ const {
 router.get('/', getBooks);
 
 // DOWNLOAD book PDF
-router.get('/:id/download',authenticate, downloadBook);
+router.get('/:id/download', authenticate, downloadBook);
 
 // GET one book by ID
 router.get('/:id', getBookById);
@@ -34,8 +34,5 @@ router.put('/:id', authenticate, validateBook, updateBook);
 
 // DELETE book by ID
 router.delete('/:id', authenticate, deleteBook);
-
-// PUT stats (admin only - update manually)
-router.put('/stats', authenticate, updateStats);
 
 module.exports = router;
