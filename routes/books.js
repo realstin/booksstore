@@ -22,6 +22,9 @@ router.get('/', getBooks);
 // GET statistics
 router.get('/stats', getStats);
 
+// PUT stats (admin only - update manually)
+router.put('/stats', authenticate, updateStats);
+
 // DOWNLOAD book PDF
 router.get('/:id/download',authenticate, downloadBook);
 
@@ -38,9 +41,6 @@ router.put('/:id', authenticate, validateBook, updateBook);
 
 // DELETE book by ID
 router.delete('/:id', authenticate, deleteBook);
-// ── STATS ENDPOINTS ──────────────────────────────────────────────────────
-// GET stats (public - show on homepage)
-router.get('/stats', getStats);
 
 // PUT stats (admin only - update manually)
 router.put('/stats', authenticate, updateStats);
