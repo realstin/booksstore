@@ -61,6 +61,7 @@ app.use(globalLimiter);
 
 // Routes
 app.use("/api/auth", authLimiter, authRoutes); // Stricter for auth
+app.use('/api/stats', apiLimiter, require('./routes/stats')); 
 app.use('/api/books', apiLimiter, bookRoutes); // Strict for API
 app.use('/api/users', apiLimiter, userRoutes); // Strict for API
 

@@ -3,7 +3,6 @@ const router = express.Router();
 
 const validateBook = require('../middleware/validateBook');
 const authenticate = require('../middleware/authenticate');
-const { getStats, updateStats } = require('../controllers/statsController');
 
 const {
   createBook,
@@ -18,12 +17,6 @@ const {
 
 // GET all books
 router.get('/', getBooks);
-
-// GET statistics
-router.get('/stats', getStats);
-
-// PUT stats (admin only - update manually)
-router.put('/stats', authenticate, updateStats);
 
 // DOWNLOAD book PDF
 router.get('/:id/download',authenticate, downloadBook);
