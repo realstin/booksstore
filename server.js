@@ -22,15 +22,10 @@ app.use(
     credentials: true,
   })
 );
-
-// ============ NEW: SECURITY HEADERS ============
 app.use(helmet()); // Add all default security headers
-// ============ END SECURITY HEADERS ============
-
 app.use(express.json());
 app.use(cookieParser());
 
-// ============ NEW: RATE LIMITING ============
 
 // Global rate limiter (applies to all requests)
 const globalLimiter = rateLimit({

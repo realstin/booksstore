@@ -1,40 +1,61 @@
-const User = require('../models/User');
-const Book = require('../models/Book');
+const Stats = require('../models/Stats');
 
-// ========== GET STATISTICS ==========
-// Returns: totalUsers, totalBooks, totalSaves, averageRating
+// ── GET STATS ──────────────────────────────────────────────────────────────
+// GET /api/books/stats
+// Returns cached stats (no database calculation)
 exports.getStats = async (req, res, next) => {
   try {
-    // STEP 1: Count total users
-    const totalUsers = await User.countDocuments();
+    console.log('[STATS] Fetching cached stats...');
 
-    // STEP 2: Count total books
-    const totalBooks = await Book.countDocuments();
+    // Get the main stats document
+    let stats = await Stats.findById('main');
 
-    // STEP 3: Calculate total saves and average rating using aggregation
-    const bookStats = await Book.aggregate([
+    // If stats don't exist yet, create them with defaults
+    if (!stats) {
+      console.log('[STATS] Creating default stats document...');
+      stats = await Stats.create({
+        _id: 'main',
+        totalUsers: 0,
+        totalBooks: 0,
+        totalSavedBooks: 0,
+        averageRating: 0,
+      });
+    }
+
+    console.log('[STATS] ✅ Returning cached stats');
+    return res.status(200).json(stats);
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ── UPDATE STATS (Admin Only) ──────────────────────────────────────────────
+// PUT /api/books/stats
+// Updates stats manually (only admins should access this)
+exports.updateStats = async (req, res, next) => {
+  try {
+    const { totalUsers, totalBooks, totalSavedBooks, averageRating } = req.body;
+
+    console.log('[STATS] Updating stats...');
+
+    // Update or create the main stats document
+    let stats = await Stats.findByIdAndUpdate(
+      'main',
       {
-        // Stage 1: Group all books together
-        $group: {
-          _id: null,
-          // Sum all savesCount values
-          totalSaves: { $sum: '$savesCount' },
-          // Calculate average of all ratings
-          averageRating: { $avg: '$rating' }
-        }
-      }
-    ]);
+        totalUsers,
+        totalBooks,
+        totalSavedBooks,
+        averageRating,
+        lastUpdated: new Date(),
+      },
+      { new: true, upsert: true } // Create if doesn't exist
+    );
 
-    // Extract the values (if no books exist, use 0)
-    const totalSaves = bookStats[0]?.totalSaves || 0;
-    const averageRating = bookStats[0]?.averageRating || 0;
-
-    // STEP 4: Send response
-    res.status(200).json({
-      totalUsers,
-      totalBooks,
-      totalSaves,
-      averageRating: Math.round(averageRating * 10) / 10 // Round to 1 decimal
+    console.log('[STATS] ✅ Stats updated successfully');
+    return res.status(200).json({
+      message: 'Stats updated successfully',
+      stats,
     });
 
   } catch (error) {

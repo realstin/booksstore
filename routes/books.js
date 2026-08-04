@@ -3,7 +3,7 @@ const router = express.Router();
 
 const validateBook = require('../middleware/validateBook');
 const authenticate = require('../middleware/authenticate');
-const { getStats } = require('../controllers/statsController');
+const { getStats, updateStats } = require('../controllers/statsController');
 
 const {
   createBook,
@@ -38,5 +38,11 @@ router.put('/:id', authenticate, validateBook, updateBook);
 
 // DELETE book by ID
 router.delete('/:id', authenticate, deleteBook);
+// ── STATS ENDPOINTS ──────────────────────────────────────────────────────
+// GET stats (public - show on homepage)
+router.get('/stats', getStats);
+
+// PUT stats (admin only - update manually)
+router.put('/stats', authenticate, updateStats);
 
 module.exports = router;
