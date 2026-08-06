@@ -8,6 +8,7 @@ const helmet = require('helmet');
 
 const bookRoutes = require('./routes/books');
 const userRoutes = require('./routes/users');
+const bookmarkRoutes = require('./routes/bookmarks');
 const errorHandler = require('./middleware/errorHandler');
 const connectDB = require('./config/database');
 const authRoutes = require("./routes/auth");
@@ -60,9 +61,10 @@ app.use(globalLimiter);
 // ============ END RATE LIMITING ============
 
 // Routes
-app.use("/api/auth", authLimiter, authRoutes); // Stricter for auth
-app.use('/api/books', apiLimiter, bookRoutes); // Strict for API
-app.use('/api/users', apiLimiter, userRoutes); // Strict for API
+app.use("/api/auth", authLimiter, authRoutes);       // Stricter for auth
+app.use('/api/books', apiLimiter, bookRoutes);        // Book catalogue
+app.use('/api/users', apiLimiter, userRoutes);        // Library (saved books)
+app.use('/api/bookmarks', apiLimiter, bookmarkRoutes); // Page bookmarks
 
 //  Error Handler (must be last)
 app.use(errorHandler);
