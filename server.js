@@ -59,7 +59,6 @@ const authLimiter = rateLimit({
 // Apply global limiter to all requests
 app.use(globalLimiter);
 
-// ============ END RATE LIMITING ============
 
 // Routes
 app.use("/api/auth", authLimiter, authRoutes);        // Auth (register/login/google/verify)
