@@ -10,7 +10,8 @@ const {
   getBookById,
   updateBook,
   deleteBook,
-  downloadBook
+  downloadBook,
+  servePdf
 } = require('../controllers/bookController');
 
 // ===== PUBLIC ROUTES =====
@@ -18,8 +19,11 @@ const {
 // GET all books
 router.get('/', getBooks);
 
-// DOWNLOAD book PDF
+// DOWNLOAD book PDF (triggers browser save-to-disk)
 router.get('/:id/download', authenticate, downloadBook);
+
+// SERVE book PDF inline for PDF.js reader (must stay above /:id)
+router.get('/:id/pdf', authenticate, servePdf);
 
 // GET one book by ID
 router.get('/:id', getBookById);
