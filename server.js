@@ -13,7 +13,7 @@ const noteRoutes = require('./routes/notes');
 const errorHandler = require('./middleware/errorHandler');
 const connectDB = require('./config/database');
 const authRoutes = require("./routes/auth");
-const PORT =process.env.PORT;
+const PORT = process.env.PORT;
 
 app.use(
   cors({
@@ -24,59 +24,74 @@ app.use(
     credentials: true,
   })
 );
-app.use(helmet()); // Add all default security headers
+app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 
-
-// Global rate limiter (applies to all requests)
+// Global rate limiter — applies to all requests except PDF streaming.
+// PDF.js makes many HTTP range requests per book open; exempting /pdf
+// prevents a single reading session from exhausting the global budget.
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Max 100 requests per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path.includes('/pdf'),
 });
 
-// API-specific rate limiter (stricter for sensitive endpoints)
+// API rate limiter — stricter limit for general API calls.
+// Skips the PDF streaming endpoint for the same reason as above.
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Max 50 API requests per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  max: 50,
   message: 'Too many API requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path.endsWith('/pdf'),
 });
 
-// Auth rate limiter (very strict for login/signup)
+// Auth rate limiter — very strict, login/signup/google only.
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30, // Max 5 login attempts per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  max: 30,
   message: 'Too many login attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Apply global limiter to all requests
+// PDF streaming limiter — generous limit to accommodate PDF.js range requests.
+// A typical book open triggers 10–50 range requests. 500 per 15 min allows
+// roughly 10–50 book opens per window while still blocking abusive clients.
+const pdfStreamLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  message: 'Too many PDF requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply global limiter to all requests (PDF endpoint is skipped via `skip`)
 app.use(globalLimiter);
 
-
 // Routes
-app.use("/api/auth", authLimiter, authRoutes);        // Auth (register/login/google/verify)
-app.use('/api/books', apiLimiter, bookRoutes);         // Book catalogue
-app.use('/api/users', apiLimiter, userRoutes);         // Library (saved books)
-app.use('/api/bookmarks', apiLimiter, bookmarkRoutes); // Page bookmarks
-app.use('/api/notes', apiLimiter, noteRoutes);         // Reading notes
+app.use("/api/auth", authLimiter, authRoutes);
 
-//  Error Handler (must be last)
+// PDF stream route — registered with its own limiter before the generic
+// /api/books mount so PDF.js range requests are not blocked by apiLimiter.
+app.use('/api/books/:id/pdf', pdfStreamLimiter);
+
+app.use('/api/books', apiLimiter, bookRoutes);
+app.use('/api/users', apiLimiter, userRoutes);
+app.use('/api/bookmarks', apiLimiter, bookmarkRoutes);
+app.use('/api/notes', apiLimiter, noteRoutes);
+
+// Error Handler (must be last)
 app.use(errorHandler);
 
-
-//  Server 
+// Server
 const startServer = async () => {
-  
-  // Database
   await connectDB();
-
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
