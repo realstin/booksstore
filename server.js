@@ -10,6 +10,7 @@ const bookRoutes = require('./routes/books');
 const userRoutes = require('./routes/users');
 const bookmarkRoutes = require('./routes/bookmarks');
 const noteRoutes = require('./routes/notes');
+const statsRoutes = require('./routes/stats');
 const errorHandler = require('./middleware/errorHandler');
 const connectDB = require('./config/database');
 const authRoutes = require("./routes/auth");
@@ -81,6 +82,7 @@ app.use("/api/auth", authLimiter, authRoutes);
 // /api/books mount so PDF.js range requests are not blocked by apiLimiter.
 app.use('/api/books/:id/pdf', pdfStreamLimiter);
 
+app.use('/api/stats', apiLimiter, statsRoutes);
 app.use('/api/books', apiLimiter, bookRoutes);
 app.use('/api/users', apiLimiter, userRoutes);
 app.use('/api/bookmarks', apiLimiter, bookmarkRoutes);

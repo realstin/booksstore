@@ -1,61 +1,76 @@
-const Stats = require('../models/Stats');
+const User = require('../models/User');
+const Book = require('../models/Book');
 
 // ── GET STATS ──────────────────────────────────────────────────────────────
-// GET /api/books/stats
-// Returns cached stats (no database calculation)
+// GET /api/stats  (public — no authentication required)
+//
+// Calculates all four homepage statistics live from the source collections.
+// No singleton Stats document is read or written here.
+//
+// Calculation method for each field:
+//   totalUsers      → User.countDocuments()
+//   totalBooks      → Book.countDocuments()
+//   totalSavedBooks → sum of every user's savedBooks array length via aggregation
+//   averageRating   → average of Book.rating across all books via aggregation
+//
 exports.getStats = async (req, res, next) => {
   try {
-    console.log('[STATS] Fetching cached stats...');
+    // Run all four queries in parallel — none depends on another.
+    const [
+      totalUsers,
+      totalBooks,
+      savedBooksAgg,
+      avgRatingAgg,
+    ] = await Promise.all([
 
-    // Get the main stats document
-    let stats = await Stats.findById('main');
+      // 1. Count every user document
+      User.countDocuments(),
 
-    // If stats don't exist yet, create them with defaults
-    if (!stats) {
-      console.log('[STATS] Creating default stats document...');
-      stats = await Stats.create({
-        _id: 'main',
-        totalUsers: 0,
-        totalBooks: 0,
-        totalSavedBooks: 0,
-        averageRating: 0,
-      });
-    }
+      // 2. Count every book document
+      Book.countDocuments(),
 
-    console.log('[STATS] ✅ Returning cached stats');
-    return res.status(200).json(stats);
+      // 3. Sum the length of savedBooks across all users.
+      //    $ifNull guards against users whose savedBooks field is missing
+      //    (e.g. documents created before the field was defined).
+      User.aggregate([
+        {
+          $group: {
+            _id: null,
+            total: {
+              $sum: { $size: { $ifNull: ['$savedBooks', []] } },
+            },
+          },
+        },
+      ]),
 
-  } catch (error) {
-    next(error);
-  }
-};
+      // 4. Average Book.rating across all books.
+      //    Only books with a rating field are included; books with rating: 0
+      //    are still included so the average reflects the real dataset.
+      Book.aggregate([
+        {
+          $group: {
+            _id: null,
+            avg: { $avg: '$rating' },
+          },
+        },
+      ]),
+    ]);
 
-// ── UPDATE STATS (Admin Only) ──────────────────────────────────────────────
-// PUT /api/books/stats
-// Updates stats manually (only admins should access this)
-exports.updateStats = async (req, res, next) => {
-  try {
-    const { totalUsers, totalBooks, totalSavedBooks, averageRating } = req.body;
+    // Extract scalar values from aggregation results.
+    // Both aggregations return an empty array when the collection is empty —
+    // fall back to 0 in that case so the response always contains a number.
+    const totalSavedBooks = savedBooksAgg.length > 0 ? savedBooksAgg[0].total : 0;
+    const averageRating   = avgRatingAgg.length  > 0 ? avgRatingAgg[0].avg   : 0;
 
-    console.log('[STATS] Updating stats...');
+    // Round averageRating to 1 decimal place (e.g. 4.3 not 4.333333…).
+    // Use Number() to ensure it stays a number, not a string.
+    const roundedAverageRating = Number(averageRating.toFixed(1));
 
-    // Update or create the main stats document
-    let stats = await Stats.findByIdAndUpdate(
-      'main',
-      {
-        totalUsers,
-        totalBooks,
-        totalSavedBooks,
-        averageRating,
-        lastUpdated: new Date(),
-      },
-      { new: true, upsert: true } // Create if doesn't exist
-    );
-
-    console.log('[STATS] ✅ Stats updated successfully');
     return res.status(200).json({
-      message: 'Stats updated successfully',
-      stats,
+      totalUsers,
+      totalBooks,
+      totalSavedBooks,
+      averageRating: roundedAverageRating,
     });
 
   } catch (error) {
