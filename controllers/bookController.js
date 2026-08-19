@@ -33,6 +33,7 @@ const getBooks = async (req, res, next) => {
 
     if (cachedBooks) {
       console.log(`[RESPONSE] Returning ${cachedBooks.length} books from cache`);
+      res.setHeader('Cache-Control', 'no-store');
       return res.status(200).json(cachedBooks);
     }
 
@@ -46,7 +47,11 @@ const getBooks = async (req, res, next) => {
 
     bookCache.set(cacheKey, books);
 
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    // Book lists are dynamic — a new book can be added at any time.
+    // no-store prevents browsers and proxies from caching this response,
+    // ensuring every request reflects the current state of the database.
+    // Individual book responses (getBookById) keep their own Cache-Control.
+    res.setHeader('Cache-Control', 'no-store');
     res.status(200).json(books);
   } catch (err) {
     next(err);
