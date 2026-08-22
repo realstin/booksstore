@@ -6,7 +6,6 @@ const User = require('../models/User');
 const authenticate = async (req, res, next) => {
 
   // ========== GET TOKEN FROM COOKIE ==========
-
   const token = req.cookies.bookstowa_token;
 
   // Check if token exists
@@ -17,7 +16,6 @@ const authenticate = async (req, res, next) => {
   }
   
   // ========== VERIFY TOKEN ==========
-  
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 

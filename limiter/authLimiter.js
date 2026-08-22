@@ -1,8 +1,5 @@
 const rateLimit = require('express-rate-limit');
 
-// Auth rate limiter — applied only to /api/auth routes
-// (register, login, Google OAuth).
-//
 // The tightest limit in the app. Keeps brute-force and
 // credential-stuffing attacks within acceptable bounds.
 const authLimiter = rateLimit({

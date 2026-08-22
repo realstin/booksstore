@@ -29,9 +29,6 @@ const issueAuthCookie = (res, user) => {
 
 // ── REGISTER ──────────────────────────────────────────────────────────────────
 // POST /api/auth/register
-// Creates the account, sends a verification email, does NOT log the user in.
-// ── REGISTER ──────────────────────────────────────────────────────────────────
-// POST /api/auth/register
 // Creates account and logs the user in immediately
 exports.register = async (req, res, next) => {
   try {
@@ -71,9 +68,6 @@ exports.register = async (req, res, next) => {
   }
 };
 
-// ── LOGIN ─────────────────────────────────────────────────────────────────────
-// POST /api/auth/login
-// Standard email + password login. Blocked if email is not verified.
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
 // POST /api/auth/login
 // Standard email + password login

@@ -40,8 +40,6 @@ app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 
-// Apply global limiter to every request.
-// PDF paths are skipped inside globalLimiter — handled by pdfStreamLimiter.
 app.use(globalLimiter);
 
 // ── Route Mounts ──────────────────────────────────────────────────────────────
