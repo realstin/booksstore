@@ -14,7 +14,7 @@ const statsRoutes = require('./routes/stats');
 const errorHandler = require('./middleware/errorHandler');
 const connectDB = require('./config/database');
 const authRoutes = require("./routes/auth");
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
 app.use(
   cors({
