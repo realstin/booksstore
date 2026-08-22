@@ -65,6 +65,10 @@ const getBookById = async (req, res, next) => {
 
     if (cachedBook) {
       console.log(`[RESPONSE] Returning book from cache`);
+      // no-store: savesCount changes every time someone saves/removes this book.
+      // Browsers must not cache individual book responses or they will display
+      // a stale count for the lifetime of their cache entry.
+      res.setHeader('Cache-Control', 'no-store');
       return res.status(200).json(cachedBook);
     }
 
@@ -75,7 +79,8 @@ const getBookById = async (req, res, next) => {
 
     bookCache.set(cacheKey, book);
 
-    res.setHeader('Cache-Control', 'public, max-age=604800');
+    // no-store on the DB-hit path for the same reason: savesCount is mutable.
+    res.setHeader('Cache-Control', 'no-store');
     res.status(200).json(book);
   } catch (err) {
     next(err);
