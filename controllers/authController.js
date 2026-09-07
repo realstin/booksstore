@@ -296,7 +296,74 @@ exports.resetPassword = async (req, res, next) => {
   }
 };
 
-// ── LOGOUT ────────────────────────────────────────────────────────────────────
+// ── TEST EMAIL (dev/debug only — remove before going to production) ──────────
+// GET /api/auth/test-email?to=youremail@gmail.com
+exports.testEmail = async (req, res, next) => {
+  try {
+    const to = req.query.to;
+    if (!to) {
+      return res.status(400).json({ message: "Provide ?to=youremail@gmail.com" });
+    }
+
+    // Log env var presence (never log actual values)
+    const envCheck = {
+      GMAIL_USER_set:         !!process.env.GMAIL_USER,
+      GMAIL_USER_value:       process.env.GMAIL_USER || "(not set)",
+      GMAIL_APP_PASSWORD_set: !!process.env.GMAIL_APP_PASSWORD,
+      GMAIL_APP_PASSWORD_len: process.env.GMAIL_APP_PASSWORD
+        ? process.env.GMAIL_APP_PASSWORD.length
+        : 0,
+      FRONTEND_URL:           process.env.FRONTEND_URL || "(not set)",
+    };
+
+    console.log("testEmail env check:", envCheck);
+
+    // Try to verify the transporter connection first
+    const nodemailer = require("nodemailer");
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+      connectionTimeout: 10000,
+      greetingTimeout:   10000,
+      socketTimeout:     15000,
+    });
+
+    await transporter.verify();
+
+    await transporter.sendMail({
+      from:    `"BookStore Test" <${process.env.GMAIL_USER}>`,
+      to,
+      subject: "BookStore email test",
+      text:    "If you receive this, email sending is working correctly.",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Test email sent to ${to}`,
+      envCheck,
+    });
+  } catch (err) {
+    console.error("testEmail error:", err);
+    return res.status(500).json({
+      success: false,
+      error:   err.message,
+      code:    err.code,
+      envCheck: {
+        GMAIL_USER_set:         !!process.env.GMAIL_USER,
+        GMAIL_USER_value:       process.env.GMAIL_USER || "(not set)",
+        GMAIL_APP_PASSWORD_set: !!process.env.GMAIL_APP_PASSWORD,
+        GMAIL_APP_PASSWORD_len: process.env.GMAIL_APP_PASSWORD
+          ? process.env.GMAIL_APP_PASSWORD.length
+          : 0,
+      },
+    });
+  }
+};
 // POST /api/auth/logout
 exports.logout = async (req, res, next) => {
   try {

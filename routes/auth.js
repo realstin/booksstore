@@ -10,6 +10,7 @@ const {
   verifyEmail,
   forgotPassword,
   resetPassword,
+  testEmail,
 } = require("../controllers/authController");
 
 const validateUserInput = require("../middleware/validateUser");
@@ -32,6 +33,9 @@ router.get("/verify-email", verifyEmail);
 // Password reset flow
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password",  resetPassword);
+
+// Debug — test email sending (remove after confirming email works)
+router.get("/test-email", testEmail);
 
 // ========== PROTECTED ROUTES ==========
 
