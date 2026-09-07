@@ -1,5 +1,5 @@
 const express = require("express");
-const router  = express.Router();
+const router = express.Router();
 
 const {
   register,
@@ -7,42 +7,27 @@ const {
   logout,
   getMe,
   googleAuth,
-  verifyEmail,
-  forgotPassword,
-  resetPassword,
-  testEmail,
 } = require("../controllers/authController");
-
 const validateUserInput = require("../middleware/validateUser");
-const authenticate      = require("../middleware/authenticate");
+const authenticate = require("../middleware/authenticate");
 
 // ========== PUBLIC ROUTES ==========
 
-// Register new user — sends verification email, does NOT log in
+// Register new user — logs them in immediately
 router.post("/register", validateUserInput, register);
 
-// Login — blocked for unverified accounts
+// Login user
 router.post("/login", validateUserInput, login);
 
-// Google OAuth
+// Google authentication
 router.post("/google", googleAuth);
-
-// Email verification — token arrives as ?token= query param
-router.get("/verify-email", verifyEmail);
-
-// Password reset flow
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password",  resetPassword);
-
-// Debug — test email sending (remove after confirming email works)
-router.get("/test-email", testEmail);
 
 // ========== PROTECTED ROUTES ==========
 
-// Get current authenticated user
+// Get current user (requires valid token)
 router.get("/me", authenticate, getMe);
 
-// Logout
+// Logout user
 router.post("/logout", authenticate, logout);
 
 module.exports = router;
