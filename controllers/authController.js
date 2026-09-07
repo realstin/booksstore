@@ -83,18 +83,15 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    // 5. Send verification email (fire-and-forget friendly — errors are caught)
-    try {
-      await sendVerificationEmail(email, plainToken);
-    } catch (emailErr) {
-      // Log but don't fail the request — user can be resent later
-      console.error("Failed to send verification email:", emailErr.message);
-    }
-
-    // 6. Tell the frontend to show the "check your email" screen
-    return res.status(201).json({
+    // 5. Respond to the client immediately — don't make them wait for the email
+    res.status(201).json({
       code: "EMAIL_VERIFICATION_REQUIRED",
       message: "Account created. Please check your email to verify your address before signing in.",
+    });
+
+    // 6. Send verification email after response is flushed (non-blocking)
+    sendVerificationEmail(email, plainToken).catch((emailErr) => {
+      console.error("Failed to send verification email:", emailErr.message);
     });
 
   } catch (error) {
@@ -237,13 +234,13 @@ exports.forgotPassword = async (req, res, next) => {
     user.passwordResetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
 
-    try {
-      await sendPasswordResetEmail(email, plainToken);
-    } catch (emailErr) {
-      console.error("Failed to send password reset email:", emailErr.message);
-    }
+    // Respond immediately — don't make the user wait for the email
+    res.status(200).json(genericResponse);
 
-    return res.status(200).json(genericResponse);
+    // Send reset email after response is flushed (non-blocking)
+    sendPasswordResetEmail(email, plainToken).catch((emailErr) => {
+      console.error("Failed to send password reset email:", emailErr.message);
+    });
 
   } catch (error) {
     next(error);

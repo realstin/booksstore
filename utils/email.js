@@ -1,17 +1,27 @@
 const nodemailer = require("nodemailer");
 
 // ── Transporter ───────────────────────────────────────────────────────────────
-// Uses Gmail with an App Password.
-// Generate one at: Google Account → Security → 2-Step Verification → App passwords
-// Set GMAIL_USER and GMAIL_APP_PASSWORD in your .env file.
+// Uses Gmail SMTP on port 587 (STARTTLS) with an App Password.
+// Explicitly setting host/port instead of service:'gmail' so it works correctly
+// on cloud platforms like Render where the service shortcut can misbehave.
+//
+// Generate an App Password at:
+//   Google Account → Security → 2-Step Verification → App passwords
+// Set GMAIL_USER and GMAIL_APP_PASSWORD in your environment variables.
 
 const createTransporter = () =>
   nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,           // STARTTLS — upgrades to TLS after connection
     auth: {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD,
     },
+    // Generous but bounded timeouts — prevents hanging the HTTP request
+    connectionTimeout: 10000,  // 10 s to establish TCP connection
+    greetingTimeout:   10000,  // 10 s to receive SMTP greeting
+    socketTimeout:     15000,  // 15 s of inactivity before abort
   });
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
