@@ -43,6 +43,30 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Email verification
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationToken: {
+      type: String,
+      default: null,
+    },
+    verificationTokenExpiry: {
+      type: Date,
+      default: null,
+    },
+
+    // Password reset
+    passwordResetToken: {
+      type: String,
+      default: null,
+    },
+    passwordResetExpiry: {
+      type: Date,
+      default: null,
+    },
+
     // Books saved by this user — stores ObjectId references only, not full documents
     savedBooks: [
       {
