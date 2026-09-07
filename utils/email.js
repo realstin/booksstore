@@ -1,27 +1,25 @@
 const nodemailer = require("nodemailer");
 
 // ── Transporter ───────────────────────────────────────────────────────────────
-// Uses Gmail SMTP on port 587 (STARTTLS) with an App Password.
-// Explicitly setting host/port instead of service:'gmail' so it works correctly
-// on cloud platforms like Render where the service shortcut can misbehave.
+// Uses Resend SMTP — works on Render free tier (port 465, no outbound blocks).
+// Resend is free: 3,000 emails/month, 100/day, no credit card needed.
 //
-// Generate an App Password at:
-//   Google Account → Security → 2-Step Verification → App passwords
-// Set GMAIL_USER and GMAIL_APP_PASSWORD in your environment variables.
+// Setup:
+//   1. Sign up at https://resend.com (free)
+//   2. Go to API Keys → Create API key → copy it
+//   3. Set RESEND_API_KEY in your Render environment variables
+//   4. Set EMAIL_FROM to "BookStore <onboarding@resend.dev>" for the free plan
+//      (no domain verification needed with resend.dev sender address)
 
 const createTransporter = () =>
   nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,           // STARTTLS — upgrades to TLS after connection
+    host:   "smtp.resend.com",
+    port:   465,
+    secure: true,           // SSL on port 465
     auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
+      user: "resend",       // always the literal string "resend"
+      pass: process.env.RESEND_API_KEY,
     },
-    // Generous but bounded timeouts — prevents hanging the HTTP request
-    connectionTimeout: 10000,  // 10 s to establish TCP connection
-    greetingTimeout:   10000,  // 10 s to receive SMTP greeting
-    socketTimeout:     15000,  // 15 s of inactivity before abort
   });
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
@@ -102,7 +100,7 @@ exports.sendVerificationEmail = async (to, token) => {
 
   const transporter = createTransporter();
   await transporter.sendMail({
-    from: `"${BRAND_NAME}" <${process.env.GMAIL_USER}>`,
+    from: process.env.EMAIL_FROM || `"BookStore" <onboarding@resend.dev>`,
     to,
     subject: "Verify your BookStore email address",
     html: emailShell(body),
@@ -141,7 +139,7 @@ exports.sendPasswordResetEmail = async (to, token) => {
 
   const transporter = createTransporter();
   await transporter.sendMail({
-    from: `"${BRAND_NAME}" <${process.env.GMAIL_USER}>`,
+    from: process.env.EMAIL_FROM || `"BookStore" <onboarding@resend.dev>`,
     to,
     subject: "Reset your BookStore password",
     html: emailShell(body),

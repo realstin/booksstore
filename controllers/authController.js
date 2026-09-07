@@ -307,13 +307,10 @@ exports.testEmail = async (req, res, next) => {
 
     // Log env var presence (never log actual values)
     const envCheck = {
-      GMAIL_USER_set:         !!process.env.GMAIL_USER,
-      GMAIL_USER_value:       process.env.GMAIL_USER || "(not set)",
-      GMAIL_APP_PASSWORD_set: !!process.env.GMAIL_APP_PASSWORD,
-      GMAIL_APP_PASSWORD_len: process.env.GMAIL_APP_PASSWORD
-        ? process.env.GMAIL_APP_PASSWORD.length
-        : 0,
-      FRONTEND_URL:           process.env.FRONTEND_URL || "(not set)",
+      RESEND_API_KEY_set: !!process.env.RESEND_API_KEY,
+      RESEND_API_KEY_len: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.length : 0,
+      EMAIL_FROM:         process.env.EMAIL_FROM || "(using default onboarding@resend.dev)",
+      FRONTEND_URL:       process.env.FRONTEND_URL || "(not set)",
     };
 
     console.log("testEmail env check:", envCheck);
@@ -321,22 +318,19 @@ exports.testEmail = async (req, res, next) => {
     // Try to verify the transporter connection first
     const nodemailer = require("nodemailer");
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
+      host:   "smtp.resend.com",
+      port:   465,
+      secure: true,
       auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
+        user: "resend",
+        pass: process.env.RESEND_API_KEY,
       },
-      connectionTimeout: 10000,
-      greetingTimeout:   10000,
-      socketTimeout:     15000,
     });
 
     await transporter.verify();
 
     await transporter.sendMail({
-      from:    `"BookStore Test" <${process.env.GMAIL_USER}>`,
+      from:    process.env.EMAIL_FROM || `"BookStore Test" <onboarding@resend.dev>`,
       to,
       subject: "BookStore email test",
       text:    "If you receive this, email sending is working correctly.",
@@ -354,12 +348,8 @@ exports.testEmail = async (req, res, next) => {
       error:   err.message,
       code:    err.code,
       envCheck: {
-        GMAIL_USER_set:         !!process.env.GMAIL_USER,
-        GMAIL_USER_value:       process.env.GMAIL_USER || "(not set)",
-        GMAIL_APP_PASSWORD_set: !!process.env.GMAIL_APP_PASSWORD,
-        GMAIL_APP_PASSWORD_len: process.env.GMAIL_APP_PASSWORD
-          ? process.env.GMAIL_APP_PASSWORD.length
-          : 0,
+        RESEND_API_KEY_set: !!process.env.RESEND_API_KEY,
+        RESEND_API_KEY_len: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.length : 0,
       },
     });
   }
