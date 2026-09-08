@@ -96,16 +96,21 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    // Respond to the client immediately — do not await the email
-    res.status(201).json({
+    // Send verification email — awaited so we know it succeeded
+    // The HTTP API is fast (port 443) so this adds < 1s to the response time
+    try {
+      await sendVerificationEmail(email, plainToken);
+    } catch (emailErr) {
+      // Log the error but still return success — the account was created.
+      // User can re-register with the same email to get a fresh token.
+      console.error("[register] Failed to send verification email:", emailErr.message);
+    }
+
+    // Respond after email is sent
+    return res.status(201).json({
       code:    "EMAIL_VERIFICATION_REQUIRED",
       message: "Account created. Please check your email to verify your address before signing in.",
     });
-
-    // Send email after the response is already on its way (non-blocking)
-    sendVerificationEmail(email, plainToken).catch((err) =>
-      console.error("[register] Failed to send verification email:", err.message)
-    );
 
   } catch (error) {
     next(error);
@@ -234,12 +239,14 @@ exports.forgotPassword = async (req, res, next) => {
     user.passwordResetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
 
-    // Respond immediately, send email non-blocking
-    res.status(200).json(genericOk);
+    // Send reset email — awaited so we know it succeeded
+    try {
+      await sendPasswordResetEmail(email, plainToken);
+    } catch (emailErr) {
+      console.error("[forgotPassword] Failed to send reset email:", emailErr.message);
+    }
 
-    sendPasswordResetEmail(email, plainToken).catch((err) =>
-      console.error("[forgotPassword] Failed to send reset email:", err.message)
-    );
+    return res.status(200).json(genericOk);
 
   } catch (error) {
     next(error);
