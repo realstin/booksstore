@@ -1,33 +1,35 @@
-const nodemailer = require("nodemailer");
+const axios = require("axios");
 
-// ── Transporter ───────────────────────────────────────────────────────────────
-// Resend SMTP — port 465 (SSL). Works on Render free tier.
-// Render blocks outbound Gmail SMTP (port 587) but never blocks port 465 to
-// smtp.resend.com because it goes over standard HTTPS infrastructure.
-//
-// Setup (free, no credit card needed — 3,000 emails/month, 100/day):
-//   1. Sign up at https://resend.com
-//   2. API Keys → Create API key → copy it
-//   3. Add RESEND_API_KEY to your Render environment variables
-//   4. Set EMAIL_FROM to: BookStore <onboarding@resend.dev>
-//      (the resend.dev domain works on the free plan with no verification needed)
+// ── Resend HTTP API ───────────────────────────────────────────────────────────
+// Uses Resend's REST API over HTTPS (port 443) instead of SMTP.
+// Render free tier blocks all outbound SMTP (465/587) but never blocks port 443.
+// Docs: https://resend.com/docs/api-reference/emails/send-email
 
-const createTransporter = () =>
-  nodemailer.createTransport({
-    host:   "smtp.resend.com",
-    port:   465,
-    secure: true,     // SSL — required for port 465
-    auth: {
-      user: "resend", // always the literal string "resend"
-      pass: process.env.RESEND_API_KEY,
-    },
-  });
+const RESEND_API_URL = "https://api.resend.com/emails";
+
+const sendEmail = async ({ to, subject, html }) => {
+  const apiKey   = process.env.RESEND_API_KEY;
+  const fromAddr = process.env.EMAIL_FROM || "BookStore <onboarding@resend.dev>";
+
+  if (!apiKey) throw new Error("RESEND_API_KEY environment variable is not set.");
+
+  await axios.post(
+    RESEND_API_URL,
+    { from: fromAddr, to, subject, html },
+    {
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type":  "application/json",
+      },
+      timeout: 10000, // 10 s — HTTP so this is plenty
+    }
+  );
+};
 
 // ── Brand constants ───────────────────────────────────────────────────────────
 const BRAND_NAME  = "BookStore";
 const BRAND_COLOR = "#0f1419";
 
-// ── Shared HTML email shell ───────────────────────────────────────────────────
 const emailShell = (bodyHtml) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -41,19 +43,16 @@ const emailShell = (bodyHtml) => `
     <tr>
       <td align="center">
         <table width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;border:1px solid #e5e7eb;overflow:hidden;">
-          <!-- Header -->
           <tr>
             <td style="padding:28px 40px;border-bottom:1px solid #f3f4f6;">
               <span style="font-size:17px;font-weight:700;letter-spacing:-0.3px;color:${BRAND_COLOR};">${BRAND_NAME}</span>
             </td>
           </tr>
-          <!-- Body -->
           <tr>
             <td style="padding:36px 40px 32px;">
               ${bodyHtml}
             </td>
           </tr>
-          <!-- Footer -->
           <tr>
             <td style="padding:20px 40px;border-top:1px solid #f3f4f6;background:#fafaf9;">
               <p style="margin:0;font-size:12px;color:#a3a3a3;line-height:1.6;">
@@ -70,15 +69,11 @@ const emailShell = (bodyHtml) => `
 </html>`;
 
 // ── Send verification email ───────────────────────────────────────────────────
-/**
- * @param {string} to     - recipient email address
- * @param {string} token  - raw (plain) verification token — NOT the hash
- */
 exports.sendVerificationEmail = async (to, token) => {
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
   const verifyUrl   = `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
 
-  const body = `
+  const html = emailShell(`
     <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:${BRAND_COLOR};letter-spacing:-0.3px;">
       Verify your email address
     </h1>
@@ -94,26 +89,21 @@ exports.sendVerificationEmail = async (to, token) => {
     <p style="margin:28px 0 0;font-size:13px;color:#9ca3af;line-height:1.6;">
       Or copy this link into your browser:<br/>
       <a href="${verifyUrl}" style="color:#6b7280;word-break:break-all;">${verifyUrl}</a>
-    </p>`;
+    </p>`);
 
-  await createTransporter().sendMail({
-    from:    process.env.EMAIL_FROM || `"${BRAND_NAME}" <onboarding@resend.dev>`,
+  await sendEmail({
     to,
     subject: "Verify your BookStore email address",
-    html:    emailShell(body),
+    html,
   });
 };
 
 // ── Send password reset email ─────────────────────────────────────────────────
-/**
- * @param {string} to     - recipient email address
- * @param {string} token  - raw (plain) reset token — NOT the hash
- */
 exports.sendPasswordResetEmail = async (to, token) => {
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
   const resetUrl    = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
-  const body = `
+  const html = emailShell(`
     <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:${BRAND_COLOR};letter-spacing:-0.3px;">
       Reset your password
     </h1>
@@ -132,12 +122,11 @@ exports.sendPasswordResetEmail = async (to, token) => {
     </p>
     <p style="margin:20px 0 0;font-size:12px;color:#d1d5db;">
       If you did not request a password reset, no action is needed — your password remains unchanged.
-    </p>`;
+    </p>`);
 
-  await createTransporter().sendMail({
-    from:    process.env.EMAIL_FROM || `"${BRAND_NAME}" <onboarding@resend.dev>`,
+  await sendEmail({
     to,
     subject: "Reset your BookStore password",
-    html:    emailShell(body),
+    html,
   });
 };
