@@ -1,5 +1,5 @@
 const express = require("express");
-const router = express.Router();
+const router  = express.Router();
 
 const {
   register,
@@ -7,27 +7,26 @@ const {
   logout,
   getMe,
   googleAuth,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/authController");
+
 const validateUserInput = require("../middleware/validateUser");
-const authenticate = require("../middleware/authenticate");
+const authenticate      = require("../middleware/authenticate");
 
-// ========== PUBLIC ROUTES ==========
+// ── Public ────────────────────────────────────────────────────────────────────
 
-// Register new user — logs them in immediately
-router.post("/register", validateUserInput, register);
+router.post("/register",       validateUserInput, register);
+router.post("/login",          validateUserInput, login);
+router.post("/google",         googleAuth);
+router.get( "/verify-email",   verifyEmail);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password",  resetPassword);
 
-// Login user
-router.post("/login", validateUserInput, login);
+// ── Protected ─────────────────────────────────────────────────────────────────
 
-// Google authentication
-router.post("/google", googleAuth);
-
-// ========== PROTECTED ROUTES ==========
-
-// Get current user (requires valid token)
-router.get("/me", authenticate, getMe);
-
-// Logout user
+router.get( "/me",     authenticate, getMe);
 router.post("/logout", authenticate, logout);
 
 module.exports = router;
