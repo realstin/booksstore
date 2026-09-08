@@ -1,46 +1,12 @@
-const crypto = require("crypto");
-const User   = require("../models/User");
+const User = require("../models/User");
 const bcrypt = require("bcrypt");
-const jwt    = require("jsonwebtoken");
+const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
-const { sendVerificationEmail, sendPasswordResetEmail } = require("../utils/email");
 
-// Reusable Google OAuth2 client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
-/**
- * Generate a cryptographically secure token pair.
- * plain  → sent inside the email link (never stored in DB)
- * hashed → SHA-256 of plain, stored in DB so the raw value is never persisted
- */
-const generateToken = () => {
-  const plain  = crypto.randomBytes(32).toString("hex");
-  const hashed = crypto.createHash("sha256").update(plain).digest("hex");
-  return { plain, hashed };
-};
-
-/**
- * Strip all sensitive fields before sending a user object to the client.
- */
-const sanitizeUser = (userDoc) => {
-  const {
-    password: _pw,
-    verificationToken: _vt,
-    verificationTokenExpiry: _vte,
-    passwordResetToken: _prt,
-    passwordResetExpiry: _pre,
-    ...safe
-  } = userDoc.toObject();
-  return safe;
-};
-
-/**
- * Sign a JWT and set the HTTP-only cookie.
- * Centralised so register (post-verify path is not used — login handles it),
- * login, and googleAuth all behave identically.
- */
 const issueAuthCookie = (res, user) => {
   const token = jwt.sign(
     { userId: user._id, email: user.email, name: user.name },
@@ -55,18 +21,19 @@ const issueAuthCookie = (res, user) => {
   });
 };
 
+const sanitizeUser = (userDoc) => {
+  const { password: _pw, ...safe } = userDoc.toObject();
+  return safe;
+};
+
 // ── REGISTER ──────────────────────────────────────────────────────────────────
-// POST /api/auth/register
-// Creates the account, sends a verification email, and returns immediately.
-// The user is NOT logged in until they verify their email.
+// POST /api/auth/register — creates account and logs in immediately
 exports.register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
-
-    // Reject if a verified account already exists for this email
-    if (existingUser && existingUser.emailVerified) {
+    if (existingUser) {
       return res.status(409).json({
         code:    "EMAIL_ALREADY_EXISTS",
         message: "An account with this email already exists. Please sign in instead.",
@@ -74,96 +41,14 @@ exports.register = async (req, res, next) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const { plain: plainToken, hashed: hashedToken } = generateToken();
-    const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const user = await User.create({ name, email, password: hashedPassword });
 
-    let user;
-    if (existingUser && !existingUser.emailVerified) {
-      // Unverified account re-registering — refresh credentials and token
-      existingUser.name                    = name;
-      existingUser.password                = hashedPassword;
-      existingUser.verificationToken       = hashedToken;
-      existingUser.verificationTokenExpiry = expiry;
-      user = await existingUser.save();
-    } else {
-      user = await User.create({
-        name,
-        email,
-        password:                hashedPassword,
-        emailVerified:           false,
-        verificationToken:       hashedToken,
-        verificationTokenExpiry: expiry,
-      });
-    }
+    issueAuthCookie(res, user);
 
-    // Send verification email — awaited so we know it succeeded
-    // The HTTP API is fast (port 443) so this adds < 1s to the response time
-    try {
-      await sendVerificationEmail(email, plainToken);
-    } catch (emailErr) {
-      // Log the error but still return success — the account was created.
-      // User can re-register with the same email to get a fresh token.
-      console.error("[register] Failed to send verification email:", emailErr.message);
-    }
-
-    // Respond after email is sent
     return res.status(201).json({
-      code:    "EMAIL_VERIFICATION_REQUIRED",
-      message: "Account created. Please check your email to verify your address before signing in.",
+      message: "Account created successfully. You are now logged in.",
+      user:    sanitizeUser(user),
     });
-
-  } catch (error) {
-    next(error);
-  }
-};
-
-// ── VERIFY EMAIL ──────────────────────────────────────────────────────────────
-// GET /api/auth/verify-email?token=<plain_token>
-exports.verifyEmail = async (req, res, next) => {
-  try {
-    const { token } = req.query;
-
-    if (!token) {
-      return res.status(400).json({
-        code:    "MISSING_TOKEN",
-        message: "Verification token is required.",
-      });
-    }
-
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-    const user        = await User.findOne({ verificationToken: hashedToken });
-
-    if (!user) {
-      return res.status(400).json({
-        code:    "INVALID_VERIFICATION_TOKEN",
-        message: "This verification link is invalid or has already been used.",
-      });
-    }
-
-    if (user.verificationTokenExpiry < new Date()) {
-      return res.status(400).json({
-        code:    "VERIFICATION_TOKEN_EXPIRED",
-        message: "This verification link has expired. Please sign up again to get a new one.",
-      });
-    }
-
-    if (user.emailVerified) {
-      return res.status(200).json({
-        code:    "EMAIL_ALREADY_VERIFIED",
-        message: "Your email address is already verified.",
-      });
-    }
-
-    user.emailVerified           = true;
-    user.verificationToken       = null;
-    user.verificationTokenExpiry = null;
-    await user.save();
-
-    return res.status(200).json({
-      code:    "EMAIL_VERIFIED",
-      message: "Email verified successfully. You can now sign in.",
-    });
-
   } catch (error) {
     next(error);
   }
@@ -180,7 +65,6 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Google-only accounts have no password
     if (!user.password) {
       return res.status(401).json({
         message: "This account uses Google Sign-In. Please continue with Google.",
@@ -192,108 +76,12 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Block sign-in until email is verified
-    if (!user.emailVerified) {
-      return res.status(403).json({
-        code:    "EMAIL_NOT_VERIFIED",
-        message: "Please verify your email address before signing in. Check your inbox for the verification link.",
-      });
-    }
-
     issueAuthCookie(res, user);
 
     return res.status(200).json({
       message: "Login successful",
       user:    sanitizeUser(user),
     });
-
-  } catch (error) {
-    next(error);
-  }
-};
-
-// ── FORGOT PASSWORD ───────────────────────────────────────────────────────────
-// POST /api/auth/forgot-password
-// Always returns 200 — never reveals whether the email exists (anti-enumeration).
-exports.forgotPassword = async (req, res, next) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: "Email address is required." });
-    }
-
-    const genericOk = {
-      message: "If an account with that email exists, we've sent a password reset link.",
-    };
-
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-
-    // Silently skip: no account, unverified account, or Google-only account
-    if (!user || !user.emailVerified || !user.password) {
-      return res.status(200).json(genericOk);
-    }
-
-    const { plain: plainToken, hashed: hashedToken } = generateToken();
-    user.passwordResetToken  = hashedToken;
-    user.passwordResetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    await user.save();
-
-    // Send reset email — awaited so we know it succeeded
-    try {
-      await sendPasswordResetEmail(email, plainToken);
-    } catch (emailErr) {
-      console.error("[forgotPassword] Failed to send reset email:", emailErr.message);
-    }
-
-    return res.status(200).json(genericOk);
-
-  } catch (error) {
-    next(error);
-  }
-};
-
-// ── RESET PASSWORD ────────────────────────────────────────────────────────────
-// POST /api/auth/reset-password
-exports.resetPassword = async (req, res, next) => {
-  try {
-    const { token, password } = req.body;
-
-    if (!token || !password) {
-      return res.status(400).json({ message: "Token and new password are required." });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters." });
-    }
-
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-    const user        = await User.findOne({ passwordResetToken: hashedToken });
-
-    if (!user) {
-      return res.status(400).json({
-        code:    "INVALID_RESET_TOKEN",
-        message: "This password reset link is invalid or has already been used.",
-      });
-    }
-
-    if (user.passwordResetExpiry < new Date()) {
-      return res.status(400).json({
-        code:    "RESET_TOKEN_EXPIRED",
-        message: "This password reset link has expired. Please request a new one.",
-      });
-    }
-
-    user.password            = await bcrypt.hash(password, 10);
-    user.passwordResetToken  = null;
-    user.passwordResetExpiry = null;
-    await user.save();
-
-    return res.status(200).json({
-      code:    "PASSWORD_RESET_SUCCESS",
-      message: "Password reset successfully. You can now sign in with your new password.",
-    });
-
   } catch (error) {
     next(error);
   }
@@ -333,7 +121,6 @@ exports.getMe = async (req, res, next) => {
 
 // ── GOOGLE AUTHENTICATION ─────────────────────────────────────────────────────
 // POST /api/auth/google
-// Google users skip email verification — Google already verified the address.
 exports.googleAuth = async (req, res, next) => {
   try {
     const { credential } = req.body;
@@ -368,22 +155,18 @@ exports.googleAuth = async (req, res, next) => {
 
     if (!user) {
       user = await User.findOne({ email });
-
       if (user) {
         return res.status(409).json({
           code:    "EMAIL_ALREADY_EXISTS",
           message: "An account with this email already exists. Please sign in with your email and password instead.",
         });
       }
-
-      // Google already verified this email address
       user = await User.create({
-        name:          name || email.split("@")[0],
+        name:     name || email.split("@")[0],
         email,
-        password:      null,
+        password: null,
         googleId,
-        avatar:        picture || "",
-        emailVerified: true,
+        avatar:   picture || "",
       });
     }
 
@@ -393,7 +176,6 @@ exports.googleAuth = async (req, res, next) => {
       message: "Google authentication successful",
       user:    sanitizeUser(user),
     });
-
   } catch (error) {
     next(error);
   }

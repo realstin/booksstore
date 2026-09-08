@@ -18,17 +18,13 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      // Not required — Google-authenticated users have no password
       required: false,
       default: null,
     },
 
-    // Google OAuth identity — populated when a user signs in via Google
-    // null for users who only use email/password
     googleId: {
       type: String,
       default: null,
-      // sparse so that null values don't conflict with each other in the unique index
       sparse: true,
     },
 
@@ -43,31 +39,6 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
-    // ── Email verification ──────────────────────────────────────────────────
-    emailVerified: {
-      type: Boolean,
-      default: false,
-    },
-    verificationToken: {
-      type: String,
-      default: null,
-    },
-    verificationTokenExpiry: {
-      type: Date,
-      default: null,
-    },
-
-    // ── Password reset ──────────────────────────────────────────────────────
-    passwordResetToken: {
-      type: String,
-      default: null,
-    },
-    passwordResetExpiry: {
-      type: Date,
-      default: null,
-    },
-
-    // Books saved by this user — stores ObjectId references only, not full documents
     savedBooks: [
       {
         type: mongoose.Schema.Types.ObjectId,
