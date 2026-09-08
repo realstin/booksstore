@@ -391,3 +391,46 @@ exports.googleAuth = async (req, res, next) => {
     next(error);
   }
 };
+
+// ── TEST EMAIL ────────────────────────────────────────────────────────────────
+// GET /api/auth/test-email?to=youremail@gmail.com
+// Temporary debug endpoint — shows exactly what Resend returns
+exports.testEmail = async (req, res) => {
+  const to = req.query.to;
+  if (!to) return res.status(400).json({ error: "Provide ?to=youremail@gmail.com" });
+
+  const nodemailer = require("nodemailer");
+
+  const envCheck = {
+    RESEND_API_KEY_set: !!process.env.RESEND_API_KEY,
+    RESEND_API_KEY_len: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.length : 0,
+    RESEND_API_KEY_prefix: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.substring(0, 6) : "(not set)",
+    EMAIL_FROM: process.env.EMAIL_FROM || "(not set)",
+    FRONTEND_URL: process.env.FRONTEND_URL || "(not set)",
+  };
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host:   "smtp.resend.com",
+      port:   465,
+      secure: true,
+      auth: {
+        user: "resend",
+        pass: process.env.RESEND_API_KEY,
+      },
+    });
+
+    await transporter.verify();
+
+    const info = await transporter.sendMail({
+      from:    process.env.EMAIL_FROM || "BookStore <onboarding@resend.dev>",
+      to,
+      subject: "BookStore test email",
+      text:    "If you see this, Resend SMTP is working correctly.",
+    });
+
+    return res.status(200).json({ success: true, messageId: info.messageId, envCheck });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message, code: err.code, envCheck });
+  }
+};

@@ -10,6 +10,7 @@ const {
   verifyEmail,
   forgotPassword,
   resetPassword,
+  testEmail,
 } = require("../controllers/authController");
 
 const validateUserInput = require("../middleware/validateUser");
@@ -23,6 +24,9 @@ router.post("/google",         googleAuth);
 router.get( "/verify-email",   verifyEmail);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password",  resetPassword);
+
+// Temporary debug route — remove after confirming email works
+router.get("/test-email", testEmail);
 
 // ── Protected ─────────────────────────────────────────────────────────────────
 
