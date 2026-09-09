@@ -47,8 +47,8 @@ exports.register = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate a secure verification token (32 random bytes → hex string)
-    const verificationToken   = crypto.randomBytes(32).toString("hex");
+    // Generate a 6-digit verification code
+    const verificationCode    = Math.floor(100000 + Math.random() * 900000).toString();
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     const user = await User.create({
@@ -56,7 +56,7 @@ exports.register = async (req, res, next) => {
       email,
       password:                 hashedPassword,
       emailVerified:            false,
-      emailVerificationToken:   verificationToken,
+      emailVerificationCode:    verificationCode,
       emailVerificationExpires: verificationExpires,
     });
 
@@ -78,9 +78,9 @@ exports.register = async (req, res, next) => {
       console.error('[NEWSLETTER] Auto-subscribe failed (register):', subErr.message);
     }
 
-    // Send verification email — fire and forget
+    // Send verification code email — fire and forget
     const { subject, html, text } = verifyEmailTemplate({
-      email, token: verificationToken, name,
+      email, code: verificationCode, name,
     });
     sendMail({ to: email, subject, html, text }).catch((err) => {
       console.error('[AUTH] Verification email failed:', err.message);
@@ -88,7 +88,7 @@ exports.register = async (req, res, next) => {
 
     return res.status(201).json({
       code:    "EMAIL_VERIFICATION_REQUIRED",
-      message: "Account created. Please check your email to verify your account.",
+      message: "Account created. Please check your email for your 6-digit verification code.",
     });
   } catch (error) {
     next(error);
@@ -251,25 +251,26 @@ exports.googleAuth = async (req, res, next) => {
 };
 
 // ── VERIFY EMAIL ──────────────────────────────────────────────────────────────
-// GET /api/auth/verify-email?token=...
-// Activates the account. Token is valid for 24 hours.
+// POST /api/auth/verify-email
+// Body: { email, code }
+// Validates the 6-digit code and activates the account.
 exports.verifyEmail = async (req, res, next) => {
   try {
-    const { token } = req.query;
+    const { email, code } = req.body;
 
-    if (!token) {
+    if (!email || !code) {
       return res.status(400).json({
-        code:    "MISSING_TOKEN",
-        message: "Verification token is missing.",
+        code:    "MISSING_FIELDS",
+        message: "Email and verification code are required.",
       });
     }
 
-    const user = await User.findOne({ emailVerificationToken: token });
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
       return res.status(400).json({
-        code:    "INVALID_VERIFICATION_TOKEN",
-        message: "This verification link is invalid.",
+        code:    "INVALID_CODE",
+        message: "Invalid email or verification code.",
       });
     }
 
@@ -282,13 +283,20 @@ exports.verifyEmail = async (req, res, next) => {
 
     if (user.emailVerificationExpires < new Date()) {
       return res.status(400).json({
-        code:    "VERIFICATION_TOKEN_EXPIRED",
-        message: "This verification link has expired. Please request a new one.",
+        code:    "CODE_EXPIRED",
+        message: "This verification code has expired. Please request a new one.",
+      });
+    }
+
+    if (user.emailVerificationCode !== String(code).trim()) {
+      return res.status(400).json({
+        code:    "INVALID_CODE",
+        message: "Incorrect verification code. Please check your email and try again.",
       });
     }
 
     user.emailVerified            = true;
-    user.emailVerificationToken   = null;
+    user.emailVerificationCode    = null;
     user.emailVerificationExpires = null;
     await user.save();
 
@@ -321,15 +329,15 @@ exports.resendVerification = async (req, res, next) => {
       });
     }
 
-    const newToken   = crypto.randomBytes(32).toString("hex");
+    const newCode    = Math.floor(100000 + Math.random() * 900000).toString();
     const newExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    user.emailVerificationToken   = newToken;
+    user.emailVerificationCode    = newCode;
     user.emailVerificationExpires = newExpires;
     await user.save();
 
     const { subject, html, text } = verifyEmailTemplate({
-      email: user.email, token: newToken, name: user.name,
+      email: user.email, code: newCode, name: user.name,
     });
     sendMail({ to: user.email, subject, html, text }).catch((err) => {
       console.error('[AUTH] Resend verification email failed:', err.message);

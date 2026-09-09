@@ -24,8 +24,8 @@ router.get( "/me",     authenticate, getMe);
 router.post("/logout", authenticate, logout);
 
 // Email verification
-router.get( "/verify-email",       verifyEmail);
-router.post("/resend-verification", resendVerification);
+router.post('/verify-email',        verifyEmail);
+router.post('/resend-verification', resendVerification);
 
 // Password reset
 router.post("/forgot-password", forgotPassword);

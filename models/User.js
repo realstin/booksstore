@@ -52,7 +52,8 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
-    emailVerificationToken: {
+    // 6-digit numeric code sent by email (stored as string to preserve leading zeros)
+    emailVerificationCode: {
       type:    String,
       default: null,
     },

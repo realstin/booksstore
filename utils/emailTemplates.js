@@ -198,12 +198,21 @@ function newArticleEmail({ email, article }) {
 }
 
 /* ─────────────────────────────────────────
-   4. EMAIL VERIFICATION
+   4. EMAIL VERIFICATION — 6-digit code
    Sent when a new user registers (email/password).
-   Contains a one-click verification link valid for 24 hours.
+   Code is valid for 24 hours.
 ───────────────────────────────────────── */
-function verifyEmailTemplate({ email, token, name }) {
-  const verifyUrl = `${FRONTEND_URL}/verify-email?token=${encodeURIComponent(token)}`;
+function verifyEmailTemplate({ email, code, name }) {
+  const digits = String(code).split('');
+
+  const digitBoxes = digits.map(d =>
+    `<span style="display:inline-block;width:44px;height:56px;line-height:56px;text-align:center;
+                  font-size:28px;font-weight:700;color:#0f1419;background:#f5f5f5;
+                  border-radius:10px;border:1px solid #e5e5e5;margin:0 4px;
+                  letter-spacing:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+       ${d}
+     </span>`
+  ).join('');
 
   const content = `
     <p style="margin:0 0 20px;font-size:12px;font-weight:600;text-transform:uppercase;
@@ -215,28 +224,27 @@ function verifyEmailTemplate({ email, token, name }) {
       Verify your email address.
     </h1>
     <p style="margin:0 0 28px;font-size:15px;color:#737373;line-height:1.75;">
-      Hi ${name || 'there'}, thanks for creating a BookStore account.
-      Click the button below to verify your email address and activate your account.
-      This link expires in <strong style="color:#0f1419;">24 hours</strong>.
+      Hi ${name || 'there'}, use the verification code below to activate your BookStore account.
+      This code expires in <strong style="color:#0f1419;">24 hours</strong>.
     </p>
-    <a href="${verifyUrl}"
-       style="display:inline-block;background:#0f1419;color:#ffffff;font-size:14px;font-weight:600;
-              padding:14px 28px;border-radius:100px;text-decoration:none;letter-spacing:-0.01em;">
-      Verify Email Address
-    </a>
-    <p style="margin:28px 0 0;font-size:12px;color:#a3a3a3;line-height:1.6;">
-      Or copy and paste this link into your browser:<br />
-      <span style="color:#737373;word-break:break-all;">${verifyUrl}</span>
+
+    <!-- Code display -->
+    <div style="text-align:center;margin:0 0 28px;">
+      ${digitBoxes}
+    </div>
+
+    <p style="margin:0 0 8px;font-size:13px;color:#a3a3a3;text-align:center;">
+      Enter this code on the verification page.
     </p>
-    <p style="margin:16px 0 0;font-size:12px;color:#a3a3a3;line-height:1.6;">
+    <p style="margin:0;font-size:12px;color:#a3a3a3;line-height:1.6;text-align:center;">
       If you did not create a BookStore account you can safely ignore this email.
     </p>
   `;
 
   return {
-    subject: 'Verify your BookStore email address',
+    subject: `${code} is your BookStore verification code`,
     html:    shell(content, email),
-    text:    `Hi ${name || 'there'},\n\nPlease verify your BookStore email address:\n${verifyUrl}\n\nThis link expires in 24 hours.\n\nIf you did not create an account, ignore this email.`,
+    text:    `Hi ${name || 'there'},\n\nYour BookStore verification code is: ${code}\n\nThis code expires in 24 hours.\n\nIf you did not create an account, ignore this email.`,
   };
 }
 
