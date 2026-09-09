@@ -1,6 +1,7 @@
-const Book = require('../models/Book');
-const axios = require('axios');
-const bookCache = require('../utils/bookCache');
+const Book       = require('../models/Book');
+const axios      = require('axios');
+const bookCache  = require('../utils/bookCache');
+const { notifyNewBook } = require('../utils/notifySubscribers');
 
 const createBook = async (req, res, next) => {
   try {
@@ -9,6 +10,10 @@ const createBook = async (req, res, next) => {
 
     console.log(`[CACHE] New book created, clearing all book lists cache`);
     bookCache.clearAllBookLists();
+
+    // Notify all active subscribers — fire and forget, never awaited.
+    // Email delivery runs in the background; the admin gets an instant response.
+    notifyNewBook(savedBook);
 
     res.status(201).json(savedBook);
   } catch (err) {

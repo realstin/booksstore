@@ -1,4 +1,6 @@
-const Subscriber = require('../models/Subscriber');
+const Subscriber                    = require('../models/Subscriber');
+const { sendMail }                  = require('../utils/mailer');
+const { welcomeEmail }              = require('../utils/emailTemplates');
 
 /**
  * newsletterController
@@ -57,6 +59,13 @@ exports.subscribe = async (req, res, next) => {
       await existing.save();
 
       console.log(`[NEWSLETTER] Reactivated subscriber: ${email}`);
+
+      // Send welcome-back email — fire and forget
+      const { subject, html, text } = welcomeEmail({ email });
+      sendMail({ to: email, subject, html, text }).catch((err) => {
+        console.error('[NEWSLETTER] Welcome email failed (reactivate):', err.message);
+      });
+
       return res.status(200).json({
         message: 'You have been resubscribed successfully.',
         resubscribed: true,
@@ -72,6 +81,13 @@ exports.subscribe = async (req, res, next) => {
     });
 
     console.log(`[NEWSLETTER] New footer subscriber: ${email}`);
+
+    // Send welcome email — fire and forget
+    const { subject, html, text } = welcomeEmail({ email });
+    sendMail({ to: email, subject, html, text }).catch((err) => {
+      console.error('[NEWSLETTER] Welcome email failed (new):', err.message);
+    });
+
     return res.status(201).json({
       message: 'You have subscribed successfully. Thank you!',
     });

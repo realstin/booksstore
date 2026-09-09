@@ -61,8 +61,11 @@ app.use('/api/newsletter', apiLimiter, newsletterRoutes);
 app.use(errorHandler);
 
 // ── Start Server ──────────────────────────────────────────────────────────────
+const { verifyConnection } = require('./utils/mailer');
+
 const startServer = async () => {
   await connectDB();
+  verifyConnection(); // verify Gmail SMTP on startup — non-blocking
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
