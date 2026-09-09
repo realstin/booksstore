@@ -56,10 +56,9 @@ const subscriberSchema = new mongoose.Schema(
   }
 );
 
-// Index: fast lookup by email (also enforced by unique:true above)
-subscriberSchema.index({ email: 1 });
-
-// Index: fetch only active subscribers efficiently when sending
+// The unique:true on the email field already creates an index automatically.
+// No need for an explicit additional index — removing the duplicate.
+// Index for fast lookup by active status when sending bulk emails.
 subscriberSchema.index({ active: 1 });
 
 module.exports = mongoose.model('Subscriber', subscriberSchema);
