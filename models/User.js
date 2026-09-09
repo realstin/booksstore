@@ -45,6 +45,33 @@ const userSchema = new mongoose.Schema(
         ref: "Book",
       },
     ],
+
+    // ── Email verification ────────────────────────────────────────────────────
+    emailVerified: {
+      type:    Boolean,
+      default: false,
+    },
+
+    emailVerificationToken: {
+      type:    String,
+      default: null,
+    },
+
+    emailVerificationExpires: {
+      type:    Date,
+      default: null,
+    },
+
+    // ── Password reset ────────────────────────────────────────────────────────
+    resetPasswordToken: {
+      type:    String,
+      default: null,
+    },
+
+    resetPasswordExpires: {
+      type:    Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

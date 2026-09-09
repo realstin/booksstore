@@ -103,15 +103,16 @@ function welcomeEmail({ email }) {
    Sent to all active subscribers when a new book is added.
 ───────────────────────────────────────── */
 function newBookEmail({ email, book }) {
-  const authors   = Array.isArray(book.authors) && book.authors.length
+  const authors  = Array.isArray(book.authors) && book.authors.length
     ? book.authors.join(', ')
     : 'BookStore Team';
 
-  const category  = Array.isArray(book.categories) && book.categories.length
+  const category = Array.isArray(book.categories) && book.categories.length
     ? book.categories[0]
     : 'Technology';
 
-  const bookUrl   = `${FRONTEND_URL}/books/${book._id}`;
+  const bookUrl  = `${FRONTEND_URL}/books/${book._id}`;
+
   const coverHtml = book.coverImage
     ? `<img src="${book.coverImage}" alt="Cover of ${book.title}"
            style="width:80px;height:107px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5;
@@ -127,8 +128,6 @@ function newBookEmail({ email, book }) {
                letter-spacing:-0.025em;line-height:1.2;">
       A new book just landed on BookStore.
     </h1>
-
-    <!-- Book preview -->
     <table cellpadding="0" cellspacing="0" width="100%"
            style="background:#fafafa;border:1px solid #e5e5e5;border-radius:12px;
                   padding:24px;margin-bottom:32px;">
@@ -141,9 +140,7 @@ function newBookEmail({ email, book }) {
                     letter-spacing:-0.02em;line-height:1.3;">${book.title}</p>
           <p style="margin:0 0 12px;font-size:13px;color:#737373;">${authors}</p>
           ${book.description
-            ? `<p style="margin:0;font-size:13px;color:#a3a3a3;line-height:1.7;
-                         display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
-                         overflow:hidden;">
+            ? `<p style="margin:0;font-size:13px;color:#a3a3a3;line-height:1.7;">
                 ${book.description.slice(0, 200)}${book.description.length > 200 ? '…' : ''}
                </p>`
             : ''}
@@ -151,7 +148,6 @@ function newBookEmail({ email, book }) {
         </td>
       </tr>
     </table>
-
     <a href="${bookUrl}"
        style="display:inline-block;background:#0f1419;color:#ffffff;font-size:14px;font-weight:600;
               padding:14px 28px;border-radius:100px;text-decoration:none;letter-spacing:-0.01em;">
@@ -169,7 +165,6 @@ function newBookEmail({ email, book }) {
 /* ─────────────────────────────────────────
    3. NEW ARTICLE NOTIFICATION
    Sent to all active subscribers when a new article is published.
-   (Ready for when the news system is backend-driven.)
 ───────────────────────────────────────── */
 function newArticleEmail({ email, article }) {
   const articleUrl = `${FRONTEND_URL}/news/${article.slug}`;
@@ -202,4 +197,97 @@ function newArticleEmail({ email, article }) {
   };
 }
 
-module.exports = { welcomeEmail, newBookEmail, newArticleEmail };
+/* ─────────────────────────────────────────
+   4. EMAIL VERIFICATION
+   Sent when a new user registers (email/password).
+   Contains a one-click verification link valid for 24 hours.
+───────────────────────────────────────── */
+function verifyEmailTemplate({ email, token, name }) {
+  const verifyUrl = `${FRONTEND_URL}/verify-email?token=${encodeURIComponent(token)}`;
+
+  const content = `
+    <p style="margin:0 0 20px;font-size:12px;font-weight:600;text-transform:uppercase;
+              letter-spacing:0.14em;color:#a3a3a3;">
+      Email Verification
+    </p>
+    <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;color:#0f1419;
+               letter-spacing:-0.025em;line-height:1.2;">
+      Verify your email address.
+    </h1>
+    <p style="margin:0 0 28px;font-size:15px;color:#737373;line-height:1.75;">
+      Hi ${name || 'there'}, thanks for creating a BookStore account.
+      Click the button below to verify your email address and activate your account.
+      This link expires in <strong style="color:#0f1419;">24 hours</strong>.
+    </p>
+    <a href="${verifyUrl}"
+       style="display:inline-block;background:#0f1419;color:#ffffff;font-size:14px;font-weight:600;
+              padding:14px 28px;border-radius:100px;text-decoration:none;letter-spacing:-0.01em;">
+      Verify Email Address
+    </a>
+    <p style="margin:28px 0 0;font-size:12px;color:#a3a3a3;line-height:1.6;">
+      Or copy and paste this link into your browser:<br />
+      <span style="color:#737373;word-break:break-all;">${verifyUrl}</span>
+    </p>
+    <p style="margin:16px 0 0;font-size:12px;color:#a3a3a3;line-height:1.6;">
+      If you did not create a BookStore account you can safely ignore this email.
+    </p>
+  `;
+
+  return {
+    subject: 'Verify your BookStore email address',
+    html:    shell(content, email),
+    text:    `Hi ${name || 'there'},\n\nPlease verify your BookStore email address:\n${verifyUrl}\n\nThis link expires in 24 hours.\n\nIf you did not create an account, ignore this email.`,
+  };
+}
+
+/* ─────────────────────────────────────────
+   5. PASSWORD RESET
+   Sent when a user requests a password reset.
+   Contains a one-click reset link valid for 1 hour.
+───────────────────────────────────────── */
+function resetPasswordTemplate({ email, token, name }) {
+  const resetUrl = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}`;
+
+  const content = `
+    <p style="margin:0 0 20px;font-size:12px;font-weight:600;text-transform:uppercase;
+              letter-spacing:0.14em;color:#a3a3a3;">
+      Password Reset
+    </p>
+    <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;color:#0f1419;
+               letter-spacing:-0.025em;line-height:1.2;">
+      Reset your password.
+    </h1>
+    <p style="margin:0 0 28px;font-size:15px;color:#737373;line-height:1.75;">
+      Hi ${name || 'there'}, we received a request to reset your BookStore password.
+      Click the button below to choose a new one.
+      This link expires in <strong style="color:#0f1419;">1 hour</strong>.
+    </p>
+    <a href="${resetUrl}"
+       style="display:inline-block;background:#0f1419;color:#ffffff;font-size:14px;font-weight:600;
+              padding:14px 28px;border-radius:100px;text-decoration:none;letter-spacing:-0.01em;">
+      Reset Password
+    </a>
+    <p style="margin:28px 0 0;font-size:12px;color:#a3a3a3;line-height:1.6;">
+      Or copy and paste this link into your browser:<br />
+      <span style="color:#737373;word-break:break-all;">${resetUrl}</span>
+    </p>
+    <p style="margin:16px 0 0;font-size:12px;color:#a3a3a3;line-height:1.6;">
+      If you did not request a password reset you can safely ignore this email.
+      Your password will not change.
+    </p>
+  `;
+
+  return {
+    subject: 'Reset your BookStore password',
+    html:    shell(content, email),
+    text:    `Hi ${name || 'there'},\n\nReset your BookStore password:\n${resetUrl}\n\nThis link expires in 1 hour.\n\nIf you did not request this, ignore this email.`,
+  };
+}
+
+module.exports = {
+  welcomeEmail,
+  newBookEmail,
+  newArticleEmail,
+  verifyEmailTemplate,
+  resetPasswordTemplate,
+};
