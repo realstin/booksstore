@@ -1,6 +1,7 @@
-const User = require("../models/User");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+const User       = require("../models/User");
+const Subscriber = require("../models/Subscriber");
+const bcrypt     = require("bcrypt");
+const jwt        = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -42,6 +43,28 @@ exports.register = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hashedPassword });
+
+    // Auto-subscribe the new user to the newsletter.
+    // insertOne with upsert=false equivalent — use findOneAndUpdate with
+    // upsert:true so a duplicate email never throws, it just skips silently.
+    try {
+      await Subscriber.findOneAndUpdate(
+        { email: user.email },
+        {
+          $setOnInsert: {
+            email:  user.email,
+            source: 'user_registration',
+            userId: user._id,
+            active: true,
+          },
+        },
+        { upsert: true, new: false }
+      );
+      console.log(`[NEWSLETTER] Auto-subscribed on register: ${user.email}`);
+    } catch (subErr) {
+      // Never block registration because of a newsletter failure
+      console.error('[NEWSLETTER] Auto-subscribe failed (register):', subErr.message);
+    }
 
     issueAuthCookie(res, user);
 
@@ -168,6 +191,26 @@ exports.googleAuth = async (req, res, next) => {
         googleId,
         avatar:   picture || "",
       });
+
+      // Auto-subscribe new Google users to the newsletter
+      try {
+        await Subscriber.findOneAndUpdate(
+          { email: user.email },
+          {
+            $setOnInsert: {
+              email:  user.email,
+              source: 'user_registration',
+              userId: user._id,
+              active: true,
+            },
+          },
+          { upsert: true, new: false }
+        );
+        console.log(`[NEWSLETTER] Auto-subscribed on Google register: ${user.email}`);
+      } catch (subErr) {
+        // Never block registration because of a newsletter failure
+        console.error('[NEWSLETTER] Auto-subscribe failed (google):', subErr.message);
+      }
     }
 
     issueAuthCookie(res, user);

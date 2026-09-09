@@ -6,12 +6,13 @@ const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 
 // ── Routes ────────────────────────────────────────────────────────────────────
-const authRoutes     = require('./routes/auth');
-const bookRoutes     = require('./routes/books');
-const userRoutes     = require('./routes/users');
-const bookmarkRoutes = require('./routes/bookmarks');
-const noteRoutes     = require('./routes/notes');
-const statsRoutes    = require('./routes/stats');
+const authRoutes       = require('./routes/auth');
+const bookRoutes       = require('./routes/books');
+const userRoutes       = require('./routes/users');
+const bookmarkRoutes   = require('./routes/bookmarks');
+const noteRoutes       = require('./routes/notes');
+const statsRoutes      = require('./routes/stats');
+const newsletterRoutes = require('./routes/newsletter');
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 const errorHandler = require('./middleware/errorHandler');
@@ -49,11 +50,12 @@ app.use('/api/auth', authLimiter, authRoutes);
 // pdfStreamLimiter wins over apiLimiter for the PDF path.
 app.use('/api/books/:id/pdf', pdfStreamLimiter);
 
-app.use('/api/stats',     apiLimiter, statsRoutes);
-app.use('/api/books',     apiLimiter, bookRoutes);
-app.use('/api/users',     apiLimiter, userRoutes);
-app.use('/api/bookmarks', apiLimiter, bookmarkRoutes);
-app.use('/api/notes',     apiLimiter, noteRoutes);
+app.use('/api/stats',      apiLimiter, statsRoutes);
+app.use('/api/books',      apiLimiter, bookRoutes);
+app.use('/api/users',      apiLimiter, userRoutes);
+app.use('/api/bookmarks',  apiLimiter, bookmarkRoutes);
+app.use('/api/notes',      apiLimiter, noteRoutes);
+app.use('/api/newsletter', apiLimiter, newsletterRoutes);
 
 // ── Error Handler (must be last) ──────────────────────────────────────────────
 app.use(errorHandler);
