@@ -37,13 +37,29 @@ const transporter = nodemailer.createTransport({
  * @returns {Promise}
  */
 async function sendMail({ to, subject, html, text }) {
-  return transporter.sendMail({
-    from: `"BookStore" <${process.env.GMAIL_USER}>`,
-    to,
-    subject,
-    html,
-    text: text || '',
-  });
+  // Log every send attempt so failures are visible in Render logs
+  console.log(`[MAILER] Sending email to: ${to} | Subject: ${subject}`);
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"BookStore" <${process.env.GMAIL_USER}>`,
+      to,
+      subject,
+      html,
+      text: text || '',
+    });
+    console.log(`[MAILER] Email sent successfully to: ${to} | MessageId: ${info.messageId}`);
+    return info;
+  } catch (err) {
+    // Log full error details so the exact failure reason appears in Render logs
+    console.error(`[MAILER] Failed to send email to: ${to}`);
+    console.error(`[MAILER] Error code: ${err.code || 'N/A'}`);
+    console.error(`[MAILER] Error message: ${err.message}`);
+    console.error(`[MAILER] GMAIL_USER set: ${!!process.env.GMAIL_USER}`);
+    console.error(`[MAILER] GMAIL_APP_PASSWORD set: ${!!process.env.GMAIL_APP_PASSWORD}`);
+    console.error(`[MAILER] GMAIL_APP_PASSWORD length: ${(process.env.GMAIL_APP_PASSWORD || '').replace(/\s/g, '').length} chars (without spaces)`);
+    throw err;
+  }
 }
 
 /**
