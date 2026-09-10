@@ -1,7 +1,7 @@
-const express      = require('express');
-const router       = express.Router();
-const authenticate = require('../middleware/authenticate');
-const { sendMail } = require('../utils/mailer');
+const express       = require('express');
+const router        = express.Router();
+const authenticate  = require('../middleware/authenticate');
+const requireAdmin  = require('../middleware/requireAdmin');
 
 const {
   subscribe,
@@ -17,10 +17,9 @@ router.post('/subscribe', subscribe);
 // POST /api/newsletter/unsubscribe
 router.post('/unsubscribe', unsubscribe);
 
-// ── Protected routes (admin only) ────────────────────────────────────────────
+// ── Admin-only routes ─────────────────────────────────────────────────────────
 
-// GET /api/newsletter/subscribers
-router.get('/subscribers', authenticate, listSubscribers);
-
+// GET /api/newsletter/subscribers — list all subscribers
+router.get('/subscribers', authenticate, requireAdmin, listSubscribers);
 
 module.exports = router;
