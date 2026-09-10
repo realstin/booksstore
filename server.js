@@ -9,10 +9,13 @@ const helmet = require('helmet');
 const authRoutes       = require('./routes/auth');
 const bookRoutes       = require('./routes/books');
 const userRoutes       = require('./routes/users');
+const adminUserRoutes  = require('./routes/adminUsers');
 const bookmarkRoutes   = require('./routes/bookmarks');
 const noteRoutes       = require('./routes/notes');
 const statsRoutes      = require('./routes/stats');
 const newsletterRoutes = require('./routes/newsletter');
+const articleRoutes    = require('./routes/articles');
+const teamRoutes       = require('./routes/team');
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 const errorHandler = require('./middleware/errorHandler');
@@ -31,8 +34,10 @@ const PORT = process.env.PORT || 3000;
 app.use(
   cors({
     origin: [
-      'http://localhost:5173',
-      'https://bookstowa.vercel.app',
+      'http://localhost:5173',          // Main frontend dev
+      'http://localhost:5174',          // Admin frontend dev
+      'https://bookstowa.vercel.app',   // Main frontend production
+      'https://bookstowa-admin.vercel.app', // Admin frontend production (when deployed)
     ],
     credentials: true,
   })
@@ -53,9 +58,12 @@ app.use('/api/books/:id/pdf', pdfStreamLimiter);
 app.use('/api/stats',      apiLimiter, statsRoutes);
 app.use('/api/books',      apiLimiter, bookRoutes);
 app.use('/api/users',      apiLimiter, userRoutes);
+app.use('/api/admin/users', apiLimiter, adminUserRoutes);
 app.use('/api/bookmarks',  apiLimiter, bookmarkRoutes);
 app.use('/api/notes',      apiLimiter, noteRoutes);
 app.use('/api/newsletter', apiLimiter, newsletterRoutes);
+app.use('/api/articles',   apiLimiter, articleRoutes);
+app.use('/api/team',       apiLimiter, teamRoutes);
 
 // ── Error Handler (must be last) ──────────────────────────────────────────────
 app.use(errorHandler);

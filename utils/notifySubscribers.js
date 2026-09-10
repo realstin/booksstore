@@ -1,87 +1,86 @@
-const Subscriber                         = require('../models/Subscriber');
-const { sendMail }                       = require('./mailer');
-const { newBookEmail, newArticleEmail }  = require('./emailTemplates');
-const logger                             = require('./logger');
+const Subscriber = require('../models/Subscriber');
+const { sendEmail } = require('./mailer');
+const logger = require('./logger');
 
 /**
- * notifySubscribers.js
+ * notifySubscribers
  * -----------------------------------------------------------------
- * Fire-and-forget helpers for sending bulk notifications.
- *
- * IMPORTANT — these functions are intentionally NOT awaited by the
- * callers (bookController, etc.). The API response is sent to the
- * admin immediately. Emails go out in the background.
- *
- * Failures are logged but never re-thrown. A broken email config
- * must never prevent a book from being created or updated.
- *
- * Sending strategy:
- *   - Fetch all active subscribers in one DB query
- *   - Send emails concurrently with Promise.allSettled so one
- *     failed delivery does not stop the rest
- *   - Log a summary of sent / failed counts
- * -----------------------------------------------------------------
+ * Sends email notifications to active subscribers when new articles are published.
+ * Fire-and-forget pattern — errors are logged but don't block the caller.
  */
 
-/* ─────────────────────────────────────────
-   Internal helper — bulk send
-───────────────────────────────────────── */
-async function _bulkSend(templateFn, templateData, label) {
+/**
+ * Notify all active subscribers about a new article
+ * @param {Object} article - The article document
+ */
+async function notifyNewArticle(article) {
   try {
-    const subscribers = await Subscriber.find({ active: true }).select('email').lean();
+    // Get all active subscribers
+    const subscribers = await Subscriber.find({ status: 'active' }).select('email');
 
-    if (!subscribers.length) {
-      logger.info({ label }, '[NOTIFY] No active subscribers — skipping notification');
+    if (subscribers.length === 0) {
+      logger.info('[NOTIFY] No active subscribers to notify');
       return;
     }
 
-    logger.info({ label, count: subscribers.length }, '[NOTIFY] Sending bulk notification');
+    const emailPromises = subscribers.map((subscriber) => {
+      const subject = `New Article: ${article.title}`;
+      const html = `
+        <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="font-size: 24px; font-weight: 600; margin-bottom: 16px; color: #0a0a0a;">
+            ${article.title}
+          </h1>
+          
+          ${article.subtitle ? `
+            <p style="font-size: 16px; color: #525252; margin-bottom: 16px;">
+              ${article.subtitle}
+            </p>
+          ` : ''}
+          
+          <p style="font-size: 14px; color: #737373; margin-bottom: 24px;">
+            ${article.excerpt}
+          </p>
+          
+          <div style="margin-bottom: 24px;">
+            <a href="${process.env.FRONTEND_URL || 'https://bookstowa.vercel.app'}/news/${article.slug}" 
+               style="display: inline-block; padding: 12px 24px; background: #0a0a0a; color: #fff; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: 500;">
+              Read Article
+            </a>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
+          
+          <p style="font-size: 12px; color: #a3a3a3; margin-bottom: 8px;">
+            You're receiving this because you subscribed to Bookstowa updates.
+          </p>
+          
+          <p style="font-size: 12px; color: #a3a3a3;">
+            <a href="${process.env.FRONTEND_URL || 'https://bookstowa.vercel.app'}/unsubscribe?email=${subscriber.email}" 
+               style="color: #0a0a0a; text-decoration: underline;">
+              Unsubscribe
+            </a>
+          </p>
+        </div>
+      `;
 
-    const results = await Promise.allSettled(
-      subscribers.map((sub) => {
-        const { subject, html, text } = templateFn({ ...templateData, email: sub.email });
-        return sendMail({ to: sub.email, subject, html, text });
-      })
-    );
-
-    const sent   = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
-
-    logger.info({ label, sent, failed }, '[NOTIFY] Bulk send complete');
-
-    // Log individual failures for debugging
-    results.forEach((r, i) => {
-      if (r.status === 'rejected') {
+      return sendEmail(subscriber.email, subject, html).catch((err) => {
         logger.error(
-          { err: r.reason, email: subscribers[i].email, label },
-          '[NOTIFY] Failed to deliver to subscriber'
+          { err, email: subscriber.email, articleId: article._id },
+          '[NOTIFY] Failed to send article notification'
         );
-      }
+      });
     });
 
+    await Promise.allSettled(emailPromises);
+    logger.info(
+      { articleId: article._id, subscriberCount: subscribers.length },
+      '[NOTIFY] Article notification emails sent'
+    );
   } catch (err) {
-    logger.error({ err, label }, '[NOTIFY] Bulk send error');
+    logger.error({ err, articleId: article._id }, '[NOTIFY] Failed to notify subscribers');
   }
 }
 
-/* ─────────────────────────────────────────
-   notifyNewBook
-   Called after a book is created.
-   Pass the full saved book document.
-───────────────────────────────────────── */
-function notifyNewBook(book) {
-  // Fire and forget — do NOT await this call
-  _bulkSend(newBookEmail, { book }, 'new-book').catch(() => {});
-}
-
-/* ─────────────────────────────────────────
-   notifyNewArticle
-   Called after a new article is published.
-   Pass an object with: { title, slug, excerpt }
-───────────────────────────────────────── */
-function notifyNewArticle(article) {
-  // Fire and forget — do NOT await this call
-  _bulkSend(newArticleEmail, { article }, 'new-article').catch(() => {});
-}
-
-module.exports = { notifyNewBook, notifyNewArticle };
+module.exports = {
+  notifyNewArticle,
+};
