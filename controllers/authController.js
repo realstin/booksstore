@@ -8,6 +8,20 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
+// Cookie options must be consistent between set and clear.
+// - Production (HTTPS, cross-origin):  secure: true  + sameSite: "None"
+// - Development (HTTP, same-origin):   secure: false + sameSite: "Lax"
+//   Browsers reject sameSite:"None" cookies that are not Secure, so using
+//   "Lax" in dev prevents the cookie from being silently dropped.
+const isProd = process.env.NODE_ENV === "production";
+
+const cookieOptions = {
+  httpOnly: true,
+  secure:   isProd,
+  sameSite: isProd ? "None" : "Lax",
+  maxAge:   24 * 60 * 60 * 1000,
+};
+
 const issueAuthCookie = (res, user) => {
   // Only immutable, non-sensitive identifiers go into the token.
   // Everything else (name, email, avatar) is fetched fresh from the DB
@@ -17,12 +31,7 @@ const issueAuthCookie = (res, user) => {
     process.env.JWT_SECRET,
     { expiresIn: "24h" }
   );
-  res.cookie("bookstowa_token", token, {
-    httpOnly: true,
-    secure:   process.env.NODE_ENV === "production",
-    sameSite: "None",
-    maxAge:   24 * 60 * 60 * 1000,
-  });
+  res.cookie("bookstowa_token", token, cookieOptions);
 };
 
 const sanitizeUser = (userDoc) => {
@@ -113,11 +122,9 @@ exports.login = async (req, res, next) => {
 // POST /api/auth/logout
 exports.logout = async (req, res, next) => {
   try {
-    res.clearCookie("bookstowa_token", {
-      httpOnly: true,
-      secure:   process.env.NODE_ENV === "production",
-      sameSite: "None",
-    });
+    // clearCookie must use the same options (secure, sameSite) that were used
+    // when the cookie was set — otherwise the browser won't match and clear it.
+    res.clearCookie("bookstowa_token", cookieOptions);
     return res.status(200).json({ message: "Logout successful. Token cleared." });
   } catch (error) {
     next(error);
