@@ -23,9 +23,10 @@ const userSchema = new mongoose.Schema(
     },
 
     googleId: {
-      type: String,
+      type:    String,
       default: null,
-      sparse: true,
+      unique:  true,  // enforced at DB level — no two accounts share the same Google identity
+      sparse:  true,  // null values are excluded from the index so email/password users are unaffected
     },
 
     role: {
