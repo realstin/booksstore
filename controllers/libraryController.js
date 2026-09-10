@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
-const User = require('../models/User');
-const Book = require('../models/Book');
+const User      = require('../models/User');
+const Book      = require('../models/Book');
 const bookCache = require('../utils/bookCache');
+const logger    = require('../utils/logger');
 
 // ========== SAVE BOOK ==========
 // POST /api/users/library/save/:bookId
@@ -73,7 +74,7 @@ exports.saveBook = async (req, res, next) => {
     // 5. Evict cache so subsequent GET /api/books/:id and GET /api/books
     //    reflect the new savesCount instead of the stale pre-save value.
     bookCache.clearBook(bookId);
-    console.log(`[CACHE] Cleared book cache after save: ${bookId}`);
+    logger.info({ bookId, userId: req.user.userId }, '[LIBRARY] Book saved — cache cleared');
 
     return res.status(200).json({
       message: 'Book saved to your library',
@@ -150,7 +151,7 @@ exports.removeBook = async (req, res, next) => {
     // 4. Evict cache so subsequent GET /api/books/:id and GET /api/books
     //    reflect the new savesCount instead of the stale pre-remove value.
     bookCache.clearBook(bookId);
-    console.log(`[CACHE] Cleared book cache after remove: ${bookId}`);
+    logger.info({ bookId, userId: req.user.userId }, '[LIBRARY] Book removed — cache cleared');
 
     return res.status(200).json({
       message: 'Book removed from your library',

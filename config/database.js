@@ -1,13 +1,16 @@
 const mongoose = require('mongoose');
+const logger   = require('../utils/logger');
 require('dotenv').config();
 
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('MongoDB connected');
+    logger.info('MongoDB connected successfully');
   } catch (error) {
-    console.log('Database connection failed:', error);
-    process.exit(1); // stop app if DB fails
+    // Fatal — the app cannot run without a database connection.
+    // Log to stderr via pino then let process.exit(1) terminate cleanly.
+    logger.fatal({ err: error }, 'Database connection failed');
+    process.exit(1);
   }
 };
 

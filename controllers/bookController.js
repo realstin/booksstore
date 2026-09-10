@@ -1,6 +1,7 @@
 const Book       = require('../models/Book');
 const axios      = require('axios');
 const bookCache  = require('../utils/bookCache');
+const logger     = require('../utils/logger');
 const { notifyNewBook } = require('../utils/notifySubscribers');
 
 const createBook = async (req, res, next) => {
@@ -8,7 +9,7 @@ const createBook = async (req, res, next) => {
     const book = new Book(req.body);
     const savedBook = await book.save();
 
-    console.log(`[CACHE] New book created, clearing all book lists cache`);
+    logger.info({ bookId: savedBook._id }, '[BOOK] Created — clearing book list cache');
     bookCache.clearAllBookLists();
 
     // Notify all active subscribers — fire and forget, never awaited.
@@ -37,12 +38,10 @@ const getBooks = async (req, res, next) => {
     const cachedBooks = bookCache.get(cacheKey);
 
     if (cachedBooks) {
-      console.log(`[RESPONSE] Returning ${cachedBooks.length} books from cache`);
       res.setHeader('Cache-Control', 'no-store');
       return res.status(200).json(cachedBooks);
     }
 
-    console.log(`[DATABASE] Querying books with filters...`);
     let query = Book.find(filter).sort(sortOption);
     if (parsedLimit > 0) {
       query = query.limit(parsedLimit);
@@ -69,7 +68,6 @@ const getBookById = async (req, res, next) => {
     const cachedBook = bookCache.get(cacheKey);
 
     if (cachedBook) {
-      console.log(`[RESPONSE] Returning book from cache`);
       // no-store: savesCount changes every time someone saves/removes this book.
       // Browsers must not cache individual book responses or they will display
       // a stale count for the lifetime of their cache entry.
@@ -77,7 +75,6 @@ const getBookById = async (req, res, next) => {
       return res.status(200).json(cachedBook);
     }
 
-    console.log(`[DATABASE] Querying book by ID...`);
     const book = await Book.findById(req.params.id);
 
     if (!book) return res.status(404).json({ message: 'Book not found' });
@@ -97,7 +94,7 @@ const updateBook = async (req, res, next) => {
     const book = await Book.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!book) return res.status(404).json({ message: 'Book not found' });
 
-    console.log(`[CACHE] Book updated, clearing cache for ID: ${req.params.id}`);
+    logger.info({ bookId: req.params.id }, '[BOOK] Updated — clearing book cache');
     bookCache.clearBook(req.params.id);
 
     res.status(200).json(book);
@@ -111,7 +108,7 @@ const deleteBook = async (req, res, next) => {
     const book = await Book.findByIdAndDelete(req.params.id);
     if (!book) return res.status(404).json({ message: 'Book not found' });
 
-    console.log(`[CACHE] Book deleted, clearing cache for ID: ${req.params.id}`);
+    logger.info({ bookId: req.params.id }, '[BOOK] Deleted — clearing book cache');
     bookCache.clearBook(req.params.id);
 
     res.status(200).json({ message: 'Book deleted' });
@@ -152,7 +149,7 @@ const downloadBook = async (req, res, next) => {
     response.data.pipe(res);
 
   } catch (err) {
-    console.error('Book download error:', err.message);
+    logger.error({ err, bookId: req.params.id }, '[BOOK] Download error');
 
     if (err.response) {
       return res.status(502).json({ message: 'Unable to fetch the PDF file' });
@@ -219,7 +216,7 @@ const servePdf = async (req, res, next) => {
     // ── 2. SSRF / URL validation ─────────────────────────────────────────────
     const check = validatePdfUrl(book.pdfUrl);
     if (!check.valid) {
-      console.error(`[PDF] Blocked unsafe pdfUrl for book ${req.params.id}: ${check.reason}`);
+      logger.error({ bookId: req.params.id, reason: check.reason }, '[PDF] Blocked unsafe pdfUrl');
       return res.status(422).json({ message: check.reason });
     }
 
@@ -240,7 +237,7 @@ const servePdf = async (req, res, next) => {
         validateStatus: null
       });
     } catch (fetchErr) {
-      console.error(`[PDF] Upstream fetch failed for book ${req.params.id}:`, fetchErr.message);
+      logger.error({ err: fetchErr, bookId: req.params.id }, '[PDF] Upstream fetch failed');
       return res.status(502).json({ message: 'Unable to reach the PDF source' });
     }
 
@@ -252,7 +249,7 @@ const servePdf = async (req, res, next) => {
       return res.status(502).json({ message: 'Access to the PDF source was denied' });
     }
     if (upstream.status >= 400) {
-      console.error(`[PDF] Upstream returned ${upstream.status} for book ${req.params.id}`);
+      logger.error({ bookId: req.params.id, upstreamStatus: upstream.status }, '[PDF] Upstream returned error status');
       return res.status(502).json({ message: 'Unable to fetch the PDF file' });
     }
 
@@ -286,7 +283,7 @@ const servePdf = async (req, res, next) => {
     upstream.data.pipe(res);
 
   } catch (err) {
-    console.error(`[PDF] Unhandled error serving book ${req.params.id}:`, err.message);
+    logger.error({ err, bookId: req.params.id }, '[PDF] Unhandled error in servePdf');
     next(err);
   }
 };

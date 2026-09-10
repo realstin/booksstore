@@ -3,6 +3,7 @@ const Subscriber = require("../models/Subscriber");
 const bcrypt     = require("bcrypt");
 const jwt        = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
+const logger     = require("../utils/logger");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -71,7 +72,7 @@ exports.register = async (req, res, next) => {
         { upsert: true, new: false }
       );
     } catch (subErr) {
-      console.error('[NEWSLETTER] Auto-subscribe failed (register):', subErr.message);
+      logger.error({ err: subErr }, '[NEWSLETTER] Auto-subscribe failed (register)');
     }
 
     issueAuthCookie(res, user);
@@ -210,9 +211,9 @@ exports.googleAuth = async (req, res, next) => {
           },
           { upsert: true, new: false }
         );
-        console.log(`[NEWSLETTER] Auto-subscribed on Google register: ${user.email}`);
+        logger.info({ email: user.email }, '[NEWSLETTER] Auto-subscribed on Google register');
       } catch (subErr) {
-        console.error('[NEWSLETTER] Auto-subscribe failed (google):', subErr.message);
+        logger.error({ err: subErr, email: user.email }, '[NEWSLETTER] Auto-subscribe failed (google)');
       }
     }
 

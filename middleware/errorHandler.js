@@ -1,6 +1,13 @@
 // Middleware: centralized error handler — must have 4 params for Express to treat it as error middleware
+const logger = require('../utils/logger');
+
 const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused-vars
-  console.error(err.stack);
+  // Log the full error with stack trace as a structured object so it is
+  // searchable in production log aggregators (e.g. filter by err.message).
+  logger.error(
+    { err, method: req.method, url: req.originalUrl },
+    'Unhandled error'
+  );
 
   // Mongoose validation error (e.g. required field missing, enum mismatch)
   // Thrown when a document fails schema rules at the database layer.

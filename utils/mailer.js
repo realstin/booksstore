@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const logger     = require('./logger');
 
 /**
  * mailer.js
@@ -37,8 +38,7 @@ const transporter = nodemailer.createTransport({
  * @returns {Promise}
  */
 async function sendMail({ to, subject, html, text }) {
-  // Log every send attempt so failures are visible in Render logs
-  console.log(`[MAILER] Sending email to: ${to} | Subject: ${subject}`);
+  logger.info({ to, subject }, '[MAILER] Sending email');
 
   try {
     const info = await transporter.sendMail({
@@ -48,16 +48,23 @@ async function sendMail({ to, subject, html, text }) {
       html,
       text: text || '',
     });
-    console.log(`[MAILER] Email sent successfully to: ${to} | MessageId: ${info.messageId}`);
+    logger.info({ to, messageId: info.messageId }, '[MAILER] Email sent successfully');
     return info;
   } catch (err) {
-    // Log full error details so the exact failure reason appears in Render logs
-    console.error(`[MAILER] Failed to send email to: ${to}`);
-    console.error(`[MAILER] Error code: ${err.code || 'N/A'}`);
-    console.error(`[MAILER] Error message: ${err.message}`);
-    console.error(`[MAILER] GMAIL_USER set: ${!!process.env.GMAIL_USER}`);
-    console.error(`[MAILER] GMAIL_APP_PASSWORD set: ${!!process.env.GMAIL_APP_PASSWORD}`);
-    console.error(`[MAILER] GMAIL_APP_PASSWORD length: ${(process.env.GMAIL_APP_PASSWORD || '').replace(/\s/g, '').length} chars (without spaces)`);
+    // Log structured details so the exact failure reason appears in logs
+    // without leaking secret values — we log whether the env vars are SET,
+    // not their actual content.
+    logger.error(
+      {
+        err,
+        to,
+        code:                    err.code || 'N/A',
+        gmailUserSet:            !!process.env.GMAIL_USER,
+        gmailAppPasswordSet:     !!process.env.GMAIL_APP_PASSWORD,
+        gmailAppPasswordLength:  (process.env.GMAIL_APP_PASSWORD || '').replace(/\s/g, '').length,
+      },
+      '[MAILER] Failed to send email'
+    );
     throw err;
   }
 }
@@ -69,11 +76,10 @@ async function sendMail({ to, subject, html, text }) {
 async function verifyConnection() {
   try {
     await transporter.verify();
-    console.log('[MAILER] Gmail SMTP connection verified successfully.');
+    logger.info('[MAILER] Gmail SMTP connection verified successfully');
   } catch (err) {
     // Log but never crash the server — email is non-critical
-    console.error('[MAILER] Gmail SMTP verification failed:', err.message);
-    console.error('[MAILER] Check GMAIL_USER and GMAIL_APP_PASSWORD in .env');
+    logger.error({ err }, '[MAILER] Gmail SMTP verification failed — check GMAIL_USER and GMAIL_APP_PASSWORD in .env');
   }
 }
 

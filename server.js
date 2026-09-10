@@ -62,12 +62,13 @@ app.use(errorHandler);
 
 // ── Start Server ──────────────────────────────────────────────────────────────
 const { verifyConnection } = require('./utils/mailer');
+const logger = require('./utils/logger');
 
 const startServer = async () => {
   await connectDB();
   verifyConnection(); // verify Gmail SMTP on startup — non-blocking
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    logger.info({ port: PORT }, `Server running on port ${PORT}`);
   });
 };
 

@@ -1,6 +1,7 @@
-const Subscriber       = require('../models/Subscriber');
-const { sendMail }     = require('./mailer');
-const { newBookEmail, newArticleEmail } = require('./emailTemplates');
+const Subscriber                         = require('../models/Subscriber');
+const { sendMail }                       = require('./mailer');
+const { newBookEmail, newArticleEmail }  = require('./emailTemplates');
+const logger                             = require('./logger');
 
 /**
  * notifySubscribers.js
@@ -30,11 +31,11 @@ async function _bulkSend(templateFn, templateData, label) {
     const subscribers = await Subscriber.find({ active: true }).select('email').lean();
 
     if (!subscribers.length) {
-      console.log(`[NOTIFY] No active subscribers — skipping ${label} notification.`);
+      logger.info({ label }, '[NOTIFY] No active subscribers — skipping notification');
       return;
     }
 
-    console.log(`[NOTIFY] Sending ${label} notification to ${subscribers.length} subscriber(s)…`);
+    logger.info({ label, count: subscribers.length }, '[NOTIFY] Sending bulk notification');
 
     const results = await Promise.allSettled(
       subscribers.map((sub) => {
@@ -46,17 +47,20 @@ async function _bulkSend(templateFn, templateData, label) {
     const sent   = results.filter((r) => r.status === 'fulfilled').length;
     const failed = results.filter((r) => r.status === 'rejected').length;
 
-    console.log(`[NOTIFY] ${label} — sent: ${sent}, failed: ${failed}`);
+    logger.info({ label, sent, failed }, '[NOTIFY] Bulk send complete');
 
     // Log individual failures for debugging
     results.forEach((r, i) => {
       if (r.status === 'rejected') {
-        console.error(`[NOTIFY] Failed to send to ${subscribers[i].email}:`, r.reason?.message);
+        logger.error(
+          { err: r.reason, email: subscribers[i].email, label },
+          '[NOTIFY] Failed to deliver to subscriber'
+        );
       }
     });
 
   } catch (err) {
-    console.error(`[NOTIFY] Bulk send error (${label}):`, err.message);
+    logger.error({ err, label }, '[NOTIFY] Bulk send error');
   }
 }
 

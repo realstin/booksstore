@@ -1,6 +1,7 @@
 const Subscriber                    = require('../models/Subscriber');
 const { sendMail }                  = require('../utils/mailer');
 const { welcomeEmail }              = require('../utils/emailTemplates');
+const logger                        = require('../utils/logger');
 
 /**
  * newsletterController
@@ -58,12 +59,12 @@ exports.subscribe = async (req, res, next) => {
       existing.active = true;
       await existing.save();
 
-      console.log(`[NEWSLETTER] Reactivated subscriber: ${email}`);
+      logger.info({ email }, '[NEWSLETTER] Reactivated subscriber');
 
       // Send welcome-back email — fire and forget
       const { subject, html, text } = welcomeEmail({ email });
       sendMail({ to: email, subject, html, text }).catch((err) => {
-        console.error('[NEWSLETTER] Welcome email failed (reactivate):', err.message);
+        logger.error({ err, email }, '[NEWSLETTER] Welcome email failed (reactivate)');
       });
 
       return res.status(200).json({
@@ -80,12 +81,12 @@ exports.subscribe = async (req, res, next) => {
       active: true,
     });
 
-    console.log(`[NEWSLETTER] New footer subscriber: ${email}`);
+    logger.info({ email }, '[NEWSLETTER] New footer subscriber');
 
     // Send welcome email — fire and forget
     const { subject, html, text } = welcomeEmail({ email });
     sendMail({ to: email, subject, html, text }).catch((err) => {
-      console.error('[NEWSLETTER] Welcome email failed (new):', err.message);
+      logger.error({ err, email }, '[NEWSLETTER] Welcome email failed (new)');
     });
 
     return res.status(201).json({
@@ -127,7 +128,7 @@ exports.unsubscribe = async (req, res, next) => {
     subscriber.active = false;
     await subscriber.save();
 
-    console.log(`[NEWSLETTER] Unsubscribed: ${email}`);
+    logger.info({ email }, '[NEWSLETTER] Unsubscribed');
     return res.status(200).json({
       message: 'You have been unsubscribed successfully.',
     });

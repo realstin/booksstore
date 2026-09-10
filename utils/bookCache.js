@@ -3,6 +3,8 @@
  * Stores frequently accessed book data in RAM for instant retrieval
  */
 
+const logger = require('./logger');
+
 class BookCache {
   constructor() {
     this.cache = {}; // Stores all cached data
@@ -30,7 +32,7 @@ class BookCache {
    */
   set(key, value) {
     this.cache[key] = value;
-    console.log(`[CACHE] Stored: ${key}`);
+    logger.debug({ key }, '[CACHE] Stored');
   }
 
   /**
@@ -39,10 +41,10 @@ class BookCache {
    */
   get(key) {
     if (this.cache[key]) {
-      console.log(`[CACHE] HIT: ${key}`);
+      logger.debug({ key }, '[CACHE] HIT');
       return this.cache[key];
     }
-    console.log(`[CACHE] MISS: ${key}`);
+    logger.debug({ key }, '[CACHE] MISS');
     return null;
   }
 
@@ -52,7 +54,7 @@ class BookCache {
    */
   clearAll() {
     this.cache = {};
-    console.log(`[CACHE] Cleared all cache`);
+    logger.debug('[CACHE] Cleared all entries');
   }
 
   /**
@@ -62,7 +64,7 @@ class BookCache {
   clearBook(bookId) {
     const key = this.generateBookKey(bookId);
     delete this.cache[key];
-    console.log(`[CACHE] Cleared: ${key}`);
+    logger.debug({ key }, '[CACHE] Cleared book entry');
     // Also clear all book lists since they might contain this book
     this.clearAllBookLists();
   }
@@ -74,7 +76,7 @@ class BookCache {
     const keysToDelete = Object.keys(this.cache).filter(key => key.startsWith('books:'));
     keysToDelete.forEach(key => {
       delete this.cache[key];
-      console.log(`[CACHE] Cleared: ${key}`);
+      logger.debug({ key }, '[CACHE] Cleared list entry');
     });
   }
 
@@ -83,9 +85,9 @@ class BookCache {
    */
   getStats() {
     return {
-      totalKeys: Object.keys(this.cache).length,
-      keys: Object.keys(this.cache),
-      memorySizeKB: (JSON.stringify(this.cache).length / 1024).toFixed(2)
+      totalKeys:    Object.keys(this.cache).length,
+      keys:         Object.keys(this.cache),
+      memorySizeKB: (JSON.stringify(this.cache).length / 1024).toFixed(2),
     };
   }
 }
