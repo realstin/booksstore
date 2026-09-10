@@ -9,8 +9,11 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
 const issueAuthCookie = (res, user) => {
+  // Only immutable, non-sensitive identifiers go into the token.
+  // Everything else (name, email, avatar) is fetched fresh from the DB
+  // on each request by the authenticate middleware, so it is always up-to-date.
   const token = jwt.sign(
-    { userId: user._id, email: user.email, name: user.name },
+    { userId: user._id, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: "24h" }
   );
@@ -123,15 +126,13 @@ exports.logout = async (req, res, next) => {
 
 // ── GET CURRENT USER ──────────────────────────────────────────────────────────
 // GET /api/auth/me
+// authenticate already fetched the full user from the DB and attached it to
+// req.user — no second round-trip needed here.
 exports.getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
     return res.status(200).json({
       message: "User data retrieved successfully",
-      user:    sanitizeUser(user),
+      user:    sanitizeUser(req.user),
     });
   } catch (error) {
     next(error);
