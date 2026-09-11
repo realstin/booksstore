@@ -37,6 +37,7 @@ app.use(
       'http://localhost:5173',          // Main frontend dev
       'http://localhost:5174',          // Admin frontend dev
       'https://bookstowa.vercel.app',   // Main frontend production
+      'https://admin-bookstore-six.vercel.app',
     ],
     credentials: true,
   })
