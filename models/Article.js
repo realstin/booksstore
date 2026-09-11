@@ -120,8 +120,7 @@ const articleSchema = new mongoose.Schema(
   }
 );
 
-// Indexes
-articleSchema.index({ slug: 1 });
+// Indexes — slug uniqueness is already enforced by unique:true above
 articleSchema.index({ published: 1 });
 articleSchema.index({ featured: 1 });
 articleSchema.index({ category: 1 });
