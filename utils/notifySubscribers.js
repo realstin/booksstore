@@ -1,5 +1,5 @@
 const Subscriber = require('../models/Subscriber');
-const { sendEmail } = require('./mailer');
+const { sendMail } = require('./mailer');
 const logger = require('./logger');
 
 /**
@@ -16,7 +16,7 @@ const logger = require('./logger');
 async function notifyNewArticle(article) {
   try {
     // Get all active subscribers
-    const subscribers = await Subscriber.find({ status: 'active' }).select('email');
+    const subscribers = await Subscriber.find({ active: true }).select('email');
 
     if (subscribers.length === 0) {
       logger.info('[NOTIFY] No active subscribers to notify');
@@ -63,7 +63,11 @@ async function notifyNewArticle(article) {
         </div>
       `;
 
-      return sendEmail(subscriber.email, subject, html).catch((err) => {
+      return sendMail({
+        to: subscriber.email,
+        subject,
+        html,
+      }).catch((err) => {
         logger.error(
           { err, email: subscriber.email, articleId: article._id },
           '[NOTIFY] Failed to send article notification'
