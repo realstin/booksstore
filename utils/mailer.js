@@ -17,13 +17,18 @@ const logger     = require('./logger');
  * -----------------------------------------------------------------
  */
 
+// Google App Passwords are displayed as "xxxx xxxx xxxx xxxx" (with spaces).
+// Whether the env var is set with or without spaces, strip them here so
+// nodemailer always receives the raw 16-character string Gmail SMTP expects.
+const appPassword = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+
 const transporter = nodemailer.createTransport({
   host:   'smtp.gmail.com',
   port:   465,
   secure: true, // port 465 uses SSL — not blocked by Render's free tier
   auth: {
     user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
+    pass: appPassword,
   },
 });
 
