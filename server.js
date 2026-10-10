@@ -16,6 +16,7 @@ const statsRoutes      = require('./routes/stats');
 const newsletterRoutes = require('./routes/newsletter');
 const articleRoutes    = require('./routes/articles');
 const teamRoutes       = require('./routes/team');
+const sitemapRoutes    = require('./routes/sitemap');
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 const errorHandler = require('./middleware/errorHandler');
@@ -64,6 +65,9 @@ app.use('/api/notes',      apiLimiter, noteRoutes);
 app.use('/api/newsletter', apiLimiter, newsletterRoutes);
 app.use('/api/articles',   apiLimiter, articleRoutes);
 app.use('/api/team',       apiLimiter, teamRoutes);
+
+// Public sitemap for search engines (served to the world through a Vercel rewrite)
+app.use('/api/sitemap.xml', apiLimiter, sitemapRoutes);
 
 // ── Error Handler (must be last) ──────────────────────────────────────────────
 app.use(errorHandler);
