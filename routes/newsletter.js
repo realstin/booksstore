@@ -14,8 +14,11 @@ const {
 // POST /api/newsletter/subscribe
 router.post('/subscribe', subscribe);
 
+// ── Authenticated routes ──────────────────────────────────────────────────────
+
 // POST /api/newsletter/unsubscribe
-router.post('/unsubscribe', unsubscribe);
+// Requires a valid session — user can only unsubscribe their own email.
+router.post('/unsubscribe', authenticate, unsubscribe);
 
 // ── Admin-only routes ─────────────────────────────────────────────────────────
 

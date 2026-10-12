@@ -16,8 +16,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'https://bookstowa.vercel.app';
 /* ─────────────────────────────────────────
    Shared shell — wraps every template
 ───────────────────────────────────────── */
-function shell(content, email) {
-  const unsubscribeUrl = `${FRONTEND_URL}/unsubscribe?email=${encodeURIComponent(email)}`;
+function shell(content) {
+  const settingsUrl = `${FRONTEND_URL}/settings`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -53,7 +53,7 @@ function shell(content, email) {
             <td style="padding:24px 40px;border-top:1px solid #f0f0f0;background:#fafafa;">
               <p style="margin:0;font-size:12px;color:#a3a3a3;line-height:1.6;">
                 You are receiving this email because you subscribed to BookStore updates.<br />
-                <a href="${unsubscribeUrl}" style="color:#737373;text-decoration:underline;">Unsubscribe</a>
+                <a href="${settingsUrl}" style="color:#737373;text-decoration:underline;">Manage email preferences</a>
                 &nbsp;·&nbsp;
                 <a href="${FRONTEND_URL}" style="color:#737373;text-decoration:underline;">Visit BookStore</a>
               </p>
@@ -72,7 +72,7 @@ function shell(content, email) {
    1. WELCOME EMAIL
    Sent when a visitor subscribes via the footer form.
 ───────────────────────────────────────── */
-function welcomeEmail({ email }) {
+function welcomeEmail() {
   const content = `
     <h1 style="margin:0 0 12px;font-size:26px;font-weight:700;color:#0f1419;letter-spacing:-0.025em;line-height:1.2;">
       Welcome to BookStore.
@@ -93,8 +93,8 @@ function welcomeEmail({ email }) {
 
   return {
     subject: 'Welcome to BookStore — you are subscribed',
-    html:    shell(content, email),
-    text:    `Welcome to BookStore!\n\nYou are now subscribed to updates.\nExplore books: ${FRONTEND_URL}\n\nUnsubscribe: ${FRONTEND_URL}/unsubscribe?email=${encodeURIComponent(email)}`,
+    html:    shell(content),
+    text:    `Welcome to BookStore!\n\nYou are now subscribed to updates.\nExplore books: ${FRONTEND_URL}\n\nManage email preferences: ${FRONTEND_URL}/settings`,
   };
 }
 
@@ -102,7 +102,7 @@ function welcomeEmail({ email }) {
    2. NEW BOOK NOTIFICATION
    Sent to all active subscribers when a new book is added.
 ───────────────────────────────────────── */
-function newBookEmail({ email, book }) {
+function newBookEmail({ book }) {
   const authors  = Array.isArray(book.authors) && book.authors.length
     ? book.authors.join(', ')
     : 'BookStore Team';
@@ -157,8 +157,8 @@ function newBookEmail({ email, book }) {
 
   return {
     subject: `New book: ${book.title}`,
-    html:    shell(content, email),
-    text:    `New book added to BookStore!\n\n${book.title}\nBy ${authors}\n\nView it here: ${bookUrl}\n\nUnsubscribe: ${FRONTEND_URL}/unsubscribe?email=${encodeURIComponent(email)}`,
+    html:    shell(content),
+    text:    `New book added to BookStore!\n\n${book.title}\nBy ${authors}\n\nView it here: ${bookUrl}\n\nManage email preferences: ${FRONTEND_URL}/settings`,
   };
 }
 
@@ -166,7 +166,7 @@ function newBookEmail({ email, book }) {
    3. NEW ARTICLE NOTIFICATION
    Sent to all active subscribers when a new article is published.
 ───────────────────────────────────────── */
-function newArticleEmail({ email, article }) {
+function newArticleEmail({ article }) {
   const articleUrl = `${FRONTEND_URL}/news/${article.slug}`;
 
   const content = `
@@ -192,8 +192,8 @@ function newArticleEmail({ email, article }) {
 
   return {
     subject: `New article: ${article.title}`,
-    html:    shell(content, email),
-    text:    `New article on BookStore!\n\n${article.title}\n\n${article.excerpt || ''}\n\nRead it here: ${articleUrl}\n\nUnsubscribe: ${FRONTEND_URL}/unsubscribe?email=${encodeURIComponent(email)}`,
+    html:    shell(content),
+    text:    `New article on BookStore!\n\n${article.title}\n\n${article.excerpt || ''}\n\nRead it here: ${articleUrl}\n\nManage email preferences: ${FRONTEND_URL}/settings`,
   };
 }
 

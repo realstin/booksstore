@@ -101,24 +101,22 @@ exports.subscribe = async (req, res, next) => {
 /* ─────────────────────────────────────────────────────────────────
    UNSUBSCRIBE
    POST /api/newsletter/unsubscribe
-   Public — no authentication required (one-click unsubscribe
-   from email links must work without a session).
-   Body: { email: string }
+   Authenticated — requires a valid session cookie.
+
+   The email is taken from req.user (the logged-in account), not
+   from the request body. This means a user can only ever unsubscribe
+   their own email — no one else's.
 
    Sets active: false. The record is kept for audit history.
 ───────────────────────────────────────────────────────────────── */
 exports.unsubscribe = async (req, res, next) => {
   try {
-    const email = (req.body.email || '').trim().toLowerCase();
-
-    if (!email) {
-      return res.status(400).json({ message: 'Email address is required.' });
-    }
+    // Use the authenticated user's email — never trust the request body.
+    const email = req.user.email;
 
     const subscriber = await Subscriber.findOne({ email });
 
-    // If not found or already inactive — still return success.
-    // No need to reveal whether the email exists in the database.
+    // Already inactive or never subscribed — treat as success.
     if (!subscriber || !subscriber.active) {
       return res.status(200).json({
         message: 'You have been unsubscribed.',
@@ -128,7 +126,7 @@ exports.unsubscribe = async (req, res, next) => {
     subscriber.active = false;
     await subscriber.save();
 
-    logger.info({ email }, '[NEWSLETTER] Unsubscribed');
+    logger.info({ email, userId: req.user._id }, '[NEWSLETTER] Unsubscribed');
     return res.status(200).json({
       message: 'You have been unsubscribed successfully.',
     });
