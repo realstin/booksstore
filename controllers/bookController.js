@@ -5,13 +5,14 @@ const logger     = require('../utils/logger');
 const { notifyNewBook } = require('../utils/notifySubscribers');
 
 // Fields an admin is allowed to set when creating or updating a book.
-// savesCount and rating are intentionally excluded — they are computed
-// by the system (user saves / reader ratings) and must never be written
-// directly through this API.
+// savesCount is intentionally excluded — it is managed by the system
+// (incremented/decremented when users save or remove a book).
+// rating IS included — admins seed it from trusted sources (Amazon, Goodreads)
+// and it can be updated to reflect current external ratings.
 const EDITABLE_FIELDS = [
   'title', 'authors', 'description', 'categories', 'language',
   'isbn', 'publisher', 'publishedDate', 'coverImage', 'pdfUrl',
-  'pages', 'edition', 'featured',
+  'pages', 'edition', 'featured', 'rating',
 ];
 
 const pickEditableFields = (body) =>

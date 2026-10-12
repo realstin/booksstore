@@ -2,9 +2,9 @@ const ALLOWED_LANGUAGES = ['en', 'fr', 'rw'];
 
 // Fields that are computed by the system and must never be set via the API.
 // savesCount is incremented/decremented when users save or remove a book.
-// rating    is derived from actual reader ratings.
-// Sending either in the request body is rejected outright.
-const PROTECTED_FIELDS = ['savesCount', 'rating'];
+// Only savesCount is blocked — rating is a seed value that admins set
+// manually from trusted sources (e.g. Amazon, Goodreads) on create/update.
+const PROTECTED_FIELDS = ['savesCount'];
 
 const validateBook = (req, res, next) => {
   // ── Block any attempt to set protected computed fields ────────────────────
@@ -29,7 +29,8 @@ const validateBook = (req, res, next) => {
     pdfUrl,
     pages,
     edition,
-    featured
+    featured,
+    rating
   } = req.body;
 
   const errors = [];
@@ -122,6 +123,12 @@ const validateBook = (req, res, next) => {
 
   if (edition !== undefined && typeof edition !== 'string') {
     errors.push('edition must be a string.');
+  }
+
+  if (rating !== undefined) {
+    if (typeof rating !== 'number' || rating < 0 || rating > 5) {
+      errors.push('rating must be a number between 0 and 5.');
+    }
   }
 
   // ---------- Result ----------
