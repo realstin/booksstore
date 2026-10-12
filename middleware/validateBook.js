@@ -1,6 +1,21 @@
 const ALLOWED_LANGUAGES = ['en', 'fr', 'rw'];
 
+// Fields that are computed by the system and must never be set via the API.
+// savesCount is incremented/decremented when users save or remove a book.
+// rating    is derived from actual reader ratings.
+// Sending either in the request body is rejected outright.
+const PROTECTED_FIELDS = ['savesCount', 'rating'];
+
 const validateBook = (req, res, next) => {
+  // ── Block any attempt to set protected computed fields ────────────────────
+  const forbidden = PROTECTED_FIELDS.filter((f) => req.body[f] !== undefined);
+  if (forbidden.length > 0) {
+    return res.status(400).json({
+      message: 'Validation failed',
+      errors: forbidden.map((f) => `${f} cannot be set manually.`),
+    });
+  }
+
   const {
     title,
     authors,
@@ -14,8 +29,6 @@ const validateBook = (req, res, next) => {
     pdfUrl,
     pages,
     edition,
-    rating,
-    savesCount,
     featured
   } = req.body;
 
@@ -94,18 +107,6 @@ const validateBook = (req, res, next) => {
       errors.push('pdfUrl must be a string.');
     } else if (!isValidUrl(pdfUrl)) {
       errors.push('pdfUrl must be a valid URL.');
-    }
-  }
-
-  if (rating !== undefined) {
-    if (typeof rating !== 'number' || rating < 0 || rating > 5) {
-      errors.push('rating must be a number between 0 and 5.');
-    }
-  }
-
-  if (savesCount !== undefined) {
-    if (typeof savesCount !== 'number' || !Number.isInteger(savesCount) || savesCount < 0) {
-      errors.push('savesCount must be a non-negative integer.');
     }
   }
 

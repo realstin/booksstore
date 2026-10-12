@@ -4,9 +4,25 @@ const bookCache  = require('../utils/bookCache');
 const logger     = require('../utils/logger');
 const { notifyNewBook } = require('../utils/notifySubscribers');
 
+// Fields an admin is allowed to set when creating or updating a book.
+// savesCount and rating are intentionally excluded — they are computed
+// by the system (user saves / reader ratings) and must never be written
+// directly through this API.
+const EDITABLE_FIELDS = [
+  'title', 'authors', 'description', 'categories', 'language',
+  'isbn', 'publisher', 'publishedDate', 'coverImage', 'pdfUrl',
+  'pages', 'edition', 'featured',
+];
+
+const pickEditableFields = (body) =>
+  EDITABLE_FIELDS.reduce((acc, key) => {
+    if (body[key] !== undefined) acc[key] = body[key];
+    return acc;
+  }, {});
+
 const createBook = async (req, res, next) => {
   try {
-    const book = new Book(req.body);
+    const book = new Book(pickEditableFields(req.body));
     const savedBook = await book.save();
 
     logger.info({ bookId: savedBook._id }, '[BOOK] Created — clearing book list cache');
@@ -91,7 +107,11 @@ const getBookById = async (req, res, next) => {
 
 const updateBook = async (req, res, next) => {
   try {
-    const book = await Book.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const book = await Book.findByIdAndUpdate(
+      req.params.id,
+      pickEditableFields(req.body),
+      { new: true }
+    );
     if (!book) return res.status(404).json({ message: 'Book not found' });
 
     logger.info({ bookId: req.params.id }, '[BOOK] Updated — clearing book cache');
