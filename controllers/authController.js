@@ -24,11 +24,11 @@ const cookieOptions = {
 };
 
 const issueAuthCookie = (res, user) => {
-  // Only immutable, non-sensitive identifiers go into the token.
-  // Everything else (name, email, avatar) is fetched fresh from the DB
-  // on each request by the authenticate middleware, so it is always up-to-date.
+  // Only the userId goes into the token. Role and everything else is fetched
+  // fresh from the DB on every request by the authenticate middleware, so
+  // reading req.user.role is always the real current value — never stale.
   const token = jwt.sign(
-    { userId: user._id, role: user.role },
+    { userId: user._id },
     process.env.JWT_SECRET,
     { expiresIn: "24h" }
   );
