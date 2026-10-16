@@ -9,6 +9,7 @@ const {
   createBook,
   getBooks,
   getBookById,
+  getTrending,
   updateBook,
   deleteBook,
   downloadBook,
@@ -16,6 +17,11 @@ const {
 } = require('../controllers/bookController');
 
 // ===== PUBLIC ROUTES =====
+
+// GET trending books (time-window cascade: today → week → month → all-time)
+// IMPORTANT: this must be declared BEFORE /:id so Express doesn't treat
+// "trending" as a MongoDB ObjectId and call getBookById with it.
+router.get('/trending', getTrending);
 
 // GET all books
 router.get('/', getBooks);

@@ -180,6 +180,82 @@ const downloadBook = async (req, res, next) => {
   }
 };
 
+// ============ TRENDING BOOKS ENDPOINT ============
+//
+// GET /api/books/trending
+//
+// Returns up to `limit` books ordered by who has been saved the most
+// within a shrinking time window.  The algorithm:
+//
+//   1. TODAY        — books whose updatedAt >= start of today AND savesCount > 0
+//   2. THIS WEEK    — books whose updatedAt >= 7 days ago AND savesCount > 0
+//   3. THIS MONTH   — books whose updatedAt >= 30 days ago AND savesCount > 0
+//   4. ALL-TIME     — any books with the highest savesCount (no date filter)
+//
+// A window is considered "empty" when it returns fewer than `minResults` books.
+// We then widen to the next window.  If even all-time has no saves we fall
+// back to the most recently added books so the section is never blank.
+//
+// Why updatedAt as the date proxy?
+//   We don't store a "saved_at" timestamp per save event.  But every call to
+//   saveBook / removeBook runs  Book.findByIdAndUpdate(…{ $inc: savesCount })
+//   which bumps updatedAt automatically (Mongoose timestamps option).
+//   A book whose savesCount > 0 and updatedAt is recent was almost certainly
+//   saved recently — it's an accurate proxy without a new DB collection.
+
+const getTrending = async (req, res, next) => {
+  try {
+    const limit      = Math.min(parseInt(req.query.limit, 10) || 4, 20);
+    const minResults = 1; // widen the window when fewer than this many books match
+
+    const now        = new Date();
+
+    // ── Helper: start of today in UTC ────────────────────────────────────────
+    const startOfToday = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+    ));
+
+    const sevenDaysAgo  = new Date(now.getTime() - 7  * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const windows = [
+      { label: 'today',     filter: { savesCount: { $gt: 0 }, updatedAt: { $gte: startOfToday } } },
+      { label: 'week',      filter: { savesCount: { $gt: 0 }, updatedAt: { $gte: sevenDaysAgo } } },
+      { label: 'month',     filter: { savesCount: { $gt: 0 }, updatedAt: { $gte: thirtyDaysAgo } } },
+      { label: 'all-time',  filter: { savesCount: { $gt: 0 } } },
+      { label: 'recent',    filter: {} },  // final fallback — most recently added
+    ];
+
+    // Trending results are time-sensitive — don't serve from cache.
+    // The cache key still needs to be cleared when savesCount changes (handled
+    // by clearBook in libraryController), but for this endpoint we skip caching
+    // entirely because results differ per time window and would need TTL logic.
+
+    let books  = [];
+    let window = 'none';
+
+    for (const w of windows) {
+      const sortField = w.label === 'recent' ? '-createdAt' : '-savesCount';
+      books = await Book.find(w.filter).sort(sortField).limit(limit);
+
+      if (books.length >= minResults) {
+        window = w.label;
+        break;
+      }
+    }
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(200).json({ books, window });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ============ END TRENDING BOOKS ENDPOINT ============
+
 // ============ PDF SERVE ENDPOINT (for PDF.js inline reading) ============
 
 // Block SSRF to private/internal infrastructure.
@@ -315,6 +391,7 @@ module.exports = {
   createBook,
   getBooks,
   getBookById,
+  getTrending,
   updateBook,
   deleteBook,
   downloadBook,
