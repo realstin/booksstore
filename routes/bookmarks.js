@@ -7,6 +7,7 @@ const {
   deleteBookmark,
   getBookmarksForBook,
   getAllBookmarks,
+  updateBookmark,
 } = require('../controllers/bookmarkController');
 
 // All bookmark endpoints require authentication — applied once to the whole router
@@ -22,6 +23,9 @@ router.get('/', getAllBookmarks);
 
 // POST   /api/bookmarks          — create a bookmark
 router.post('/', createBookmark);
+
+// PATCH /api/bookmarks/:bookmarkId — update an owned bookmark title
+router.patch('/:bookmarkId', updateBookmark);
 
 // DELETE /api/bookmarks/:bookId/:page — delete a specific bookmark
 router.delete('/:bookId/:page', deleteBookmark);

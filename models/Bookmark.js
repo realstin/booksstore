@@ -26,6 +26,13 @@ const bookmarkSchema = new mongoose.Schema(
         message: 'Page number must be an integer',
       },
     },
+
+    title: {
+      type: String,
+      trim: true,
+      maxlength: [120, 'Bookmark title must be 120 characters or fewer.'],
+      default: '',
+    },
   },
   {
     timestamps: true, // adds createdAt and updatedAt — consistent with User and Book models

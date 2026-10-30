@@ -14,7 +14,7 @@ const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 // Returns the existing bookmark cleanly if it already exists — no error, no duplicate.
 exports.createBookmark = async (req, res, next) => {
   try {
-    const { bookId, page } = req.body;
+    const { bookId, page, title = '' } = req.body;
     const userId = req.user.userId; // always from JWT — never from request body
 
     // ── Validate bookId ──────────────────────────────────────────────────────
@@ -34,6 +34,9 @@ exports.createBookmark = async (req, res, next) => {
       return res.status(400).json({
         message: 'page must be a positive integer (1 or greater).',
       });
+    }
+    if (typeof title !== 'string' || title.trim().length > 120) {
+      return res.status(400).json({ message: 'title must be 120 characters or fewer.' });
     }
 
     // ── Verify the book exists ───────────────────────────────────────────────
@@ -64,6 +67,7 @@ exports.createBookmark = async (req, res, next) => {
       user: userId,
       book: bookId,
       page: pageNum,
+      title: title.trim(),
     });
 
     return res.status(201).json({
@@ -76,6 +80,30 @@ exports.createBookmark = async (req, res, next) => {
     // The compound unique index acts as a final safety net.
     // If two concurrent requests slip through the findOne check simultaneously,
     // MongoDB throws code 11000 which the existing errorHandler converts to 409.
+    next(err);
+  }
+};
+
+// PATCH /api/bookmarks/:bookmarkId — update only a bookmark owned by this user.
+exports.updateBookmark = async (req, res, next) => {
+  try {
+    const { bookmarkId } = req.params;
+    const { title } = req.body;
+    if (!isValidObjectId(bookmarkId)) {
+      return res.status(400).json({ message: 'Invalid bookmarkId.' });
+    }
+    if (typeof title !== 'string' || title.trim().length > 120) {
+      return res.status(400).json({ message: 'title must be 120 characters or fewer.' });
+    }
+
+    const bookmark = await Bookmark.findOneAndUpdate(
+      { _id: bookmarkId, user: req.user.userId },
+      { $set: { title: title.trim() } },
+      { new: true, runValidators: true }
+    );
+    if (!bookmark) return res.status(404).json({ message: 'Bookmark not found.' });
+    return res.status(200).json({ bookmark });
+  } catch (err) {
     next(err);
   }
 };
@@ -154,7 +182,7 @@ exports.getBookmarksForBook = async (req, res, next) => {
 
     // ── Fetch bookmarks — user-scoped, sorted by page ascending ─────────────
     const bookmarks = await Bookmark.find({ user: userId, book: bookId })
-      .select('_id book page createdAt updatedAt')
+      .select('_id book page title createdAt updatedAt')
       .sort({ page: 1 });
 
     return res.status(200).json({
