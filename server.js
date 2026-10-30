@@ -72,6 +72,10 @@ app.use('/api/sitemap.xml', apiLimiter, sitemapRoutes);
 // ── Error Handler (must be last) ──────────────────────────────────────────────
 app.use(errorHandler);
 
+app.get("/",(req,res)=>{
+  res.send("glad to see you finding books!");
+});
+
 // ── Start Server ──────────────────────────────────────────────────────────────
 const { verifyConnection } = require('./utils/mailer');
 const logger = require('./utils/logger');
